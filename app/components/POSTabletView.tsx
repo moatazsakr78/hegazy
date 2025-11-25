@@ -239,7 +239,7 @@ export default function POSTabletView({
         {/* POS Tabs Bar - Compact Design */}
         <div className="bg-[#2B3544] border-b border-gray-600 flex items-center justify-between flex-shrink-0">
           {/* Right Side: Selection Display */}
-          <div className="flex items-center gap-2 text-[10px] px-2 py-1 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-2 text-xs px-2 py-0.5 overflow-x-auto scrollbar-hide">
             {/* Customer/Supplier */}
             <span className="text-gray-300 whitespace-nowrap">
               {isPurchaseMode ? 'المورد' : 'العميل'}:{' '}
@@ -293,7 +293,7 @@ export default function POSTabletView({
                 onClick={() => {
                   clearSelections()
                 }}
-                className="text-[10px] text-gray-400 hover:text-red-400 transition-colors px-1.5 py-0.5 rounded whitespace-nowrap"
+                className="text-xs text-gray-400 hover:text-red-400 transition-colors px-1.5 py-0.5 rounded whitespace-nowrap"
               >
                 مسح الكل
               </button>
@@ -301,7 +301,7 @@ export default function POSTabletView({
           </div>
 
           {/* Vertical Divider */}
-          <div className="h-6 w-px bg-gray-600"></div>
+          <div className="h-5 w-px bg-gray-600"></div>
 
           {/* Left Side: POS Tabs */}
           <div className="flex items-center overflow-x-auto scrollbar-hide flex-1">
@@ -316,7 +316,7 @@ export default function POSTabletView({
               >
                 <button
                   onClick={() => switchTab(tab.id)}
-                  className="px-2 py-1 text-[10px] font-medium flex items-center gap-1 transition-colors whitespace-nowrap"
+                  className="px-2 py-0.5 text-xs font-medium flex items-center gap-1 transition-colors whitespace-nowrap"
                 >
                   <span>{tab.title}</span>
                 </button>
@@ -330,7 +330,7 @@ export default function POSTabletView({
                     className="ml-0.5 p-0.5 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
                     title="إغلاق"
                   >
-                    <XMarkIcon className="w-2.5 h-2.5" />
+                    <XMarkIcon className="w-3 h-3" />
                   </button>
                 )}
               </div>
@@ -339,10 +339,10 @@ export default function POSTabletView({
             {/* Add New Tab Button */}
             <button
               onClick={() => setShowAddTabModal(true)}
-              className="px-1.5 py-1 text-green-400 hover:text-green-300 hover:bg-green-500/10 transition-colors flex items-center gap-0.5 border-l border-gray-600"
+              className="px-1.5 py-0.5 text-green-400 hover:text-green-300 hover:bg-green-500/10 transition-colors flex items-center gap-0.5 border-l border-gray-600"
               title="إضافة نافذة بيع جديدة"
             >
-              <PlusIcon className="w-2.5 h-2.5" />
+              <PlusIcon className="w-3 h-3" />
             </button>
           </div>
         </div>
