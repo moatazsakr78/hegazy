@@ -53,7 +53,7 @@ export async function createSalesInvoice({
   // Use default customer if none selected
   const DEFAULT_CUSTOMER_ID = '00000000-0000-0000-0000-000000000001' // The default customer from database
   const customerId = (selections.customer && selections.customer.id) ? selections.customer.id : DEFAULT_CUSTOMER_ID
-  
+
   console.log('Customer selection debug:', {
     hasCustomer: !!selections.customer,
     customerId: customerId,

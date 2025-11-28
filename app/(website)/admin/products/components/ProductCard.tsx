@@ -75,6 +75,7 @@ export default function ProductCard({
         <img
           src={product.image}
           alt={product.name}
+          loading="lazy"
           className="w-full h-60 object-cover rounded-lg"
           onError={(e) => {
             const target = e.target as HTMLImageElement;

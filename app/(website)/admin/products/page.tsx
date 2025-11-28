@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useProducts } from '../../../lib/hooks/useProducts';
+import { useProductsAdmin } from '../../../lib/hooks/useProductsAdmin';
 import { useStoreCategories } from '../../../../lib/hooks/useStoreCategories';
 import { DragDropProvider } from './components/DragDropProvider';
 import ProductManagementGrid from './components/ProductManagementGrid';
@@ -28,7 +28,7 @@ interface ProductManagementItem {
 
 export default function ProductManagementPage() {
   const router = useRouter();
-  const { products: databaseProducts, isLoading, fetchProducts } = useProducts();
+  const { products: databaseProducts, isLoading, fetchProducts } = useProductsAdmin();
   const { categories: storeCategories, isLoading: isCategoriesLoading, fetchCategories: fetchStoreCategories, deleteCategory: deleteStoreCategory, reorderCategories } = useStoreCategories();
   const [products, setProducts] = useState<ProductManagementItem[]>([]);
   const [originalProducts, setOriginalProducts] = useState<ProductManagementItem[]>([]);
@@ -76,7 +76,7 @@ export default function ProductManagementPage() {
         id: dbProduct.id,
         name: dbProduct.name || 'منتج بدون اسم',
         description: dbProduct.description || '',
-        price: dbProduct.finalPrice || dbProduct.price || 0,
+        price: dbProduct.price || 0,
         image: dbProduct.main_image_url || '/placeholder-product.svg',
         category: dbProduct.category?.name || 'عام',
         isHidden: dbProduct.is_hidden || false,
@@ -84,9 +84,8 @@ export default function ProductManagementPage() {
         displayOrder: dbProduct.display_order || index,
         suggestedProducts: dbProduct.suggested_products || []
       }));
-      
-      // Sort by display order
-      convertedProducts.sort((a, b) => a.displayOrder - b.displayOrder);
+
+      // Already sorted by display_order in the query
       setProducts(convertedProducts);
       setOriginalProducts(JSON.parse(JSON.stringify(convertedProducts))); // Deep copy
       setHasUnsavedChanges(false);
