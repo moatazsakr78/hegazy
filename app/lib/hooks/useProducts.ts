@@ -265,19 +265,82 @@ export function useProducts() {
             console.warn('Unable to fetch inventory data (likely auth required):', err)
           }
 
-          // Fetch variants for all branches (handle auth errors gracefully)
+          // Fetch variant definitions and quantities
           let variantsData: any[] = []
           try {
-            const { data, error } = await supabase
-              .from('product_variants')
+            console.log(`🔍 Loading variants for product: ${product.name} (${product.id})`)
+
+            // First, load variant definitions (colors and shapes)
+            const { data: definitions, error: defError } = await supabase
+              .from('product_color_shape_definitions')
               .select('*')
               .eq('product_id', product.id)
 
-            if (!error && data) {
-              variantsData = data
+            console.log(`📊 Definitions query result:`, { definitions, defError })
+
+            if (defError) {
+              console.error('❌ Error loading definitions:', defError)
+            }
+
+            if (!defError && definitions && definitions.length > 0) {
+              console.log(`✅ Found ${definitions.length} definitions for ${product.name}`)
+
+              // Build productColors from color definitions
+              const colorDefinitions = definitions.filter(d => d.variant_type === 'color')
+              if (colorDefinitions.length > 0) {
+                productColors = colorDefinitions.map(d => ({
+                  id: d.id,
+                  name: d.name || '',
+                  color: d.color_hex || '#6B7280',
+                  image: d.image_url || undefined
+                }))
+                console.log(`🎨 Built ${productColors.length} productColors:`, productColors)
+              }
+
+              // Load quantities for these definitions
+              const { data: quantities, error: qtyError } = await supabase
+                .from('product_variant_quantities')
+                .select('*')
+                .in('variant_definition_id', definitions.map(d => d.id))
+
+              console.log(`📦 Quantities query result:`, { quantities, qtyError })
+
+              if (qtyError) {
+                console.error('❌ Error loading quantities:', qtyError)
+              }
+
+              if (!qtyError && quantities && quantities.length > 0) {
+                console.log(`✅ Found ${quantities.length} quantities for ${product.name}`)
+
+                // Build variantsData from definitions + quantities
+                variantsData = quantities.map(qty => {
+                  const definition = definitions.find(d => d.id === qty.variant_definition_id)
+                  if (!definition) {
+                    console.warn(`⚠️ No definition found for quantity:`, qty)
+                    return null
+                  }
+
+                  return {
+                    branch_id: qty.branch_id,
+                    warehouse_id: null, // We only support branches for now
+                    variant_type: definition.variant_type,
+                    name: definition.name,
+                    value: definition.color_hex || '',
+                    quantity: qty.quantity || 0,
+                    image_url: definition.image_url,
+                    barcode: definition.barcode
+                  }
+                }).filter(v => v !== null)
+
+                console.log(`✅ Built ${variantsData.length} variantsData for ${product.name}:`, variantsData)
+              } else {
+                console.log(`⚠️ No quantities found for ${product.name}`)
+              }
+            } else {
+              console.log(`⚠️ No definitions found for ${product.name}`)
             }
           } catch (err) {
-            console.warn('Unable to fetch variants data (likely auth required):', err)
+            console.error('❌ Error fetching variants data:', err)
           }
 
           // ✨ Fetch product videos from product_videos table

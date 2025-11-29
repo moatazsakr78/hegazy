@@ -1592,19 +1592,64 @@ export default function ProductsPage() {
                           {Object.entries(modalProduct.variantsData).map(([locationId, variants]: [string, any]) => {
                             const branch = branches.find(b => b.id === locationId)
                             const locationName = branch?.name || `موقع ${locationId.slice(0, 8)}`
-                            
+
+                            // Helper functions
+                            const getVariantColor = (variant: any) => {
+                              if (variant.variant_type === 'color') {
+                                const productColor = modalProduct.productColors?.find((c: any) => c.name === variant.name)
+                                if (productColor?.color) return productColor.color
+                                if (variant.value) return variant.value
+                                if (variant.color_hex) return variant.color_hex
+                              }
+                              return '#6B7280'
+                            }
+
+                            const getTextColor = (bgColor: string) => {
+                              const hex = bgColor.replace('#', '')
+                              const r = parseInt(hex.substr(0, 2), 16)
+                              const g = parseInt(hex.substr(2, 2), 16)
+                              const b = parseInt(hex.substr(4, 2), 16)
+                              const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+                              return luminance > 0.5 ? '#000000' : '#FFFFFF'
+                            }
+
+                            // Calculate unassigned quantity
+                            const totalInventoryQuantity = modalProduct.inventoryData?.[locationId]?.quantity || 0
+                            const assignedQuantity = variants.reduce((sum: number, v: any) => sum + (v.quantity || 0), 0)
+                            const unassignedQuantity = totalInventoryQuantity - assignedQuantity
+
                             return (
                               <div key={locationId} className="bg-[#2B3544] rounded-lg p-4">
                                 <p className="text-white font-medium mb-3">{locationName}</p>
                                 <div className="flex flex-wrap gap-2">
-                                  {variants.map((variant: any, index: number) => (
-                                    <span
-                                      key={index}
-                                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-600 text-white border border-gray-500"
-                                    >
-                                      {variant.name} ({variant.quantity})
+                                  {/* Show specified variants (colors, shapes with names) */}
+                                  {variants
+                                    .filter((v: any) => v.name !== 'غير محدد')
+                                    .map((variant: any, index: number) => {
+                                      const bgColor = getVariantColor(variant)
+                                      const textColor = getTextColor(bgColor)
+
+                                      return (
+                                        <span
+                                          key={index}
+                                          className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"
+                                          style={{
+                                            backgroundColor: bgColor,
+                                            color: textColor,
+                                            borderColor: bgColor === '#6B7280' ? '#6B7280' : bgColor
+                                          }}
+                                        >
+                                          {variant.name} ({variant.quantity})
+                                        </span>
+                                      )
+                                    })}
+
+                                  {/* Show unassigned quantity if any */}
+                                  {unassignedQuantity > 0 && (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white bg-gray-600 border border-gray-600">
+                                      غير محدد ({unassignedQuantity})
                                     </span>
-                                  ))}
+                                  )}
                                 </div>
                               </div>
                             )

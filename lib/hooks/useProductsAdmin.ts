@@ -186,14 +186,49 @@ export function useProductsAdmin(options?: { selectedBranches?: string[] }) {
         console.warn('Error fetching inventory:', inventoryError);
       }
 
-      // ✨ Query 4: Get ALL variants for ALL products in ONE query
-      const { data: variants, error: variantsError } = await supabase
-        .from('product_variants')
-        .select('product_id, variant_type, name, quantity, color_hex, color_name, image_url, branch_id')
+      // ✨ Query 4a: Get ALL variant DEFINITIONS for ALL products
+      const { data: variantDefinitions, error: definitionsError } = await supabase
+        .from('product_color_shape_definitions')
+        .select('id, product_id, variant_type, name, color_hex, image_url, barcode, sort_order')
         .in('product_id', productIds);
 
-      if (variantsError) {
-        console.warn('Error fetching variants:', variantsError);
+      if (definitionsError) {
+        console.warn('Error fetching variant definitions:', definitionsError);
+      }
+
+      // ✨ Query 4b: Get ALL variant QUANTITIES for ALL products
+      let variants: any[] = [];
+      if (variantDefinitions && variantDefinitions.length > 0) {
+        const definitionIds = variantDefinitions.map(d => d.id);
+        const { data: quantities, error: quantitiesError } = await supabase
+          .from('product_variant_quantities')
+          .select('variant_definition_id, branch_id, quantity')
+          .in('variant_definition_id', definitionIds);
+
+        if (quantitiesError) {
+          console.warn('Error fetching variant quantities:', quantitiesError);
+        }
+
+        // Build variants array from definitions + quantities
+        if (quantities && quantities.length > 0) {
+          variants = quantities.map(qty => {
+            const definition = variantDefinitions.find(d => d.id === qty.variant_definition_id);
+            if (!definition) return null;
+
+            return {
+              product_id: definition.product_id,
+              variant_type: definition.variant_type,
+              name: definition.name,
+              quantity: qty.quantity || 0,
+              color_hex: definition.color_hex,
+              color_name: definition.name, // Use name as color_name for compatibility
+              image_url: definition.image_url,
+              branch_id: qty.branch_id
+            };
+          }).filter(v => v !== null);
+        }
+
+        console.log(`✅ Loaded ${variants.length} variant quantities from ${variantDefinitions.length} definitions`);
       }
 
       // ✨ Query 5: Get ALL videos for ALL products in ONE query
@@ -209,10 +244,11 @@ export function useProductsAdmin(options?: { selectedBranches?: string[] }) {
 
       console.timeEnd('⚡ Fetch products with inventory');
 
-      // Group inventory, variants, and videos by product ID for O(1) lookup
+      // Group inventory, variants, videos, and color definitions by product ID for O(1) lookup
       const inventoryMap = new Map<string, any[]>();
       const variantsMap = new Map<string, any[]>();
       const videosMap = new Map<string, ProductVideo[]>();
+      const colorsMap = new Map<string, any[]>();
 
       (inventory || []).forEach(item => {
         const existing = inventoryMap.get(item.product_id) || [];
@@ -232,11 +268,26 @@ export function useProductsAdmin(options?: { selectedBranches?: string[] }) {
         videosMap.set(item.product_id, existing);
       });
 
+      // Build productColors map from color definitions
+      (variantDefinitions || [])
+        .filter(d => d.variant_type === 'color')
+        .forEach(colorDef => {
+          const existing = colorsMap.get(colorDef.product_id) || [];
+          existing.push({
+            id: colorDef.id,
+            name: colorDef.name || '',
+            color: colorDef.color_hex || '#6B7280',
+            image: colorDef.image_url || undefined
+          });
+          colorsMap.set(colorDef.product_id, existing);
+        });
+
       // Enrich products with computed data (client-side - fast!)
       const enrichedProducts: Product[] = rawProducts.map((product: any) => {
         const productInventory = inventoryMap.get(product.id) || [];
         const productVariants = variantsMap.get(product.id) || [];
         const productVideos = videosMap.get(product.id) || [];
+        const productColors = colorsMap.get(product.id) || [];
 
         // Calculate total stock
         let totalQuantity = 0;
@@ -327,6 +378,7 @@ export function useProductsAdmin(options?: { selectedBranches?: string[] }) {
           totalQuantity,
           inventoryData,
           variantsData,
+          productColors, // ✨ Colors from variant definitions
           allImages,
           additional_images: exportAdditionalImages, // ✨ For export modal
           productVideos: productVideos, // ✨ Videos from product_videos table
