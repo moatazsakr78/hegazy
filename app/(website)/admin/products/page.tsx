@@ -10,8 +10,6 @@ import CategoryManagementGrid from './components/CategoryManagementGrid';
 import AddStoreCategoryModal from './components/AddStoreCategoryModal';
 import ProductSizeModal from './components/ProductSizeModal';
 import ManageSizeGroupsModal from './components/ManageSizeGroupsModal';
-import ProductVariantDefinitionsModal from '../../../components/ProductVariantDefinitionsModal';
-import ProductVariantQuantitiesModal from '../../../components/ProductVariantQuantitiesModal';
 import { supabase } from '../../../lib/supabase/client';
 import { revalidateAll } from '../../../../lib/utils/revalidate';
 
@@ -49,34 +47,11 @@ export default function ProductManagementPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [isProductSizeModalOpen, setIsProductSizeModalOpen] = useState(false);
   const [isManageSizeGroupsModalOpen, setIsManageSizeGroupsModalOpen] = useState(false);
-  const [isVariantDefinitionsModalOpen, setIsVariantDefinitionsModalOpen] = useState(false);
-  const [isVariantQuantitiesModalOpen, setIsVariantQuantitiesModalOpen] = useState(false);
-  const [selectedProductForVariants, setSelectedProductForVariants] = useState<any | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [branches, setBranches] = useState<any[]>([]);
 
   // Set client-side flag after component mounts
   useEffect(() => {
     setIsClient(true);
-  }, []);
-
-  // Load branches data
-  useEffect(() => {
-    const loadBranches = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('branches')
-          .select('*')
-          .order('name', { ascending: true });
-
-        if (error) throw error;
-        setBranches(data || []);
-      } catch (error) {
-        console.error('Error loading branches:', error);
-      }
-    };
-
-    loadBranches();
   }, []);
 
   // Warn user when leaving with unsaved changes
@@ -503,28 +478,6 @@ export default function ProductManagementPage() {
     setSelectedProductId(selectedProductId === productId ? null : productId);
   };
 
-  // Handle opening variant definitions modal
-  const handleOpenVariantDefinitions = () => {
-    if (selectedProductId) {
-      const product = databaseProducts.find((p: any) => p.id === selectedProductId);
-      if (product) {
-        setSelectedProductForVariants(product);
-        setIsVariantDefinitionsModalOpen(true);
-      }
-    }
-  };
-
-  // Handle opening variant quantities modal
-  const handleOpenVariantQuantities = () => {
-    if (selectedProductId) {
-      const product = databaseProducts.find((p: any) => p.id === selectedProductId);
-      if (product) {
-        setSelectedProductForVariants(product);
-        setIsVariantQuantitiesModalOpen(true);
-      }
-    }
-  };
-
   // Filter products based on search term
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -627,46 +580,6 @@ export default function ProductManagementPage() {
                   </svg>
                   <span className="text-sm font-bold text-center leading-tight text-white transition-colors">
                     فك الربط
-                  </span>
-                </button>
-
-                <div className="w-px h-8 bg-white/30 mx-2"></div>
-
-                {/* Manage Colors & Shapes Button */}
-                <button
-                  onClick={handleOpenVariantDefinitions}
-                  disabled={!selectedProductId}
-                  className={`flex flex-col items-center justify-center p-4 transition-colors group min-w-[100px] ${
-                    selectedProductId
-                      ? 'hover:bg-white/10 text-white'
-                      : 'text-white/30 cursor-not-allowed'
-                  }`}
-                >
-                  <svg className="w-8 h-8 mb-2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                  </svg>
-                  <span className="text-sm font-bold text-center leading-tight transition-colors">
-                    الألوان والأشكال
-                  </span>
-                </button>
-
-                <div className="w-px h-8 bg-white/30 mx-2"></div>
-
-                {/* Set Quantities Button */}
-                <button
-                  onClick={handleOpenVariantQuantities}
-                  disabled={!selectedProductId}
-                  className={`flex flex-col items-center justify-center p-4 transition-colors group min-w-[100px] ${
-                    selectedProductId
-                      ? 'hover:bg-white/10 text-white'
-                      : 'text-white/30 cursor-not-allowed'
-                  }`}
-                >
-                  <svg className="w-8 h-8 mb-2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                  <span className="text-sm font-bold text-center leading-tight transition-colors">
-                    تحديد الكميات
                   </span>
                 </button>
 
@@ -1046,39 +959,6 @@ export default function ProductManagementPage() {
           fetchProducts();
         }}
       />
-
-      {/* Product Variant Definitions Modal */}
-      {selectedProductForVariants && (
-        <ProductVariantDefinitionsModal
-          product={selectedProductForVariants}
-          isOpen={isVariantDefinitionsModalOpen}
-          onClose={() => {
-            setIsVariantDefinitionsModalOpen(false);
-            setSelectedProductForVariants(null);
-          }}
-          onDefinitionsUpdated={() => {
-            // Refresh products if needed
-            fetchProducts();
-          }}
-        />
-      )}
-
-      {/* Product Variant Quantities Modal */}
-      {selectedProductForVariants && (
-        <ProductVariantQuantitiesModal
-          product={selectedProductForVariants}
-          branches={branches}
-          isOpen={isVariantQuantitiesModalOpen}
-          onClose={() => {
-            setIsVariantQuantitiesModalOpen(false);
-            setSelectedProductForVariants(null);
-          }}
-          onQuantitiesUpdated={() => {
-            // Refresh products if needed
-            fetchProducts();
-          }}
-        />
-      )}
 
     </div>
   );
