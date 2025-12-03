@@ -36,12 +36,12 @@ export function ShapeManagement({ productShapes = [], setProductShapes, isEditMo
     setEditingShape(null)
   }
 
-  const handleModalSave = async (name: string) => {
+  const handleModalSave = async (name: string, imageUrl?: string | null) => {
     try {
       if (editingShape) {
-        await updateShape(editingShape.id, name)
+        await updateShape(editingShape.id, name, imageUrl)
       } else {
-        await addShape(name)
+        await addShape(name, imageUrl)
       }
       handleModalClose()
     } catch (error) {
@@ -84,9 +84,18 @@ export function ShapeManagement({ productShapes = [], setProductShapes, isEditMo
               className="bg-[#374151] rounded-lg p-3 flex items-center justify-between hover:bg-[#4B5563] transition-colors"
             >
               <div className="flex items-center gap-3">
+                {shape.image_url && (
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#2B3544] flex-shrink-0">
+                    <img
+                      src={shape.image_url}
+                      alt={shape.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
                 <span className="text-white font-medium">{shape.name}</span>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleEdit(shape)}

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 export interface Shape {
   id: string
   name: string
+  image_url?: string | null
   created_at: string
   updated_at: string
 }
@@ -43,11 +44,12 @@ export function useShapes() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedShapes))
   }
 
-  const addShape = async (name: string) => {
+  const addShape = async (name: string, imageUrl?: string | null) => {
     try {
       const newShape: Shape = {
         id: Date.now().toString(),
         name,
+        image_url: imageUrl || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
@@ -55,7 +57,7 @@ export function useShapes() {
       const updatedShapes = [...shapes, newShape].sort((a, b) => a.name.localeCompare(b.name))
       setShapes(updatedShapes)
       saveToStorage(updatedShapes)
-      
+
       return newShape
     } catch (err) {
       console.error('Error:', err)
@@ -63,17 +65,17 @@ export function useShapes() {
     }
   }
 
-  const updateShape = async (id: string, name: string) => {
+  const updateShape = async (id: string, name: string, imageUrl?: string | null) => {
     try {
-      const updatedShapes = shapes.map(shape => 
-        shape.id === id 
-          ? { ...shape, name, updated_at: new Date().toISOString() }
+      const updatedShapes = shapes.map(shape =>
+        shape.id === id
+          ? { ...shape, name, image_url: imageUrl !== undefined ? imageUrl : shape.image_url, updated_at: new Date().toISOString() }
           : shape
       ).sort((a, b) => a.name.localeCompare(b.name))
 
       setShapes(updatedShapes)
       saveToStorage(updatedShapes)
-      
+
       return updatedShapes.find(shape => shape.id === id)!
     } catch (err) {
       console.error('Error:', err)

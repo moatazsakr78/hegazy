@@ -394,7 +394,7 @@ export default function ProductSidebar({ isOpen, onClose, onProductCreated, crea
                   shapeMap.set(variant.name, {
                     id: `variant-${variant.name}-${Date.now()}`,
                     name: variant.name,
-                    image_url: imageUrl,
+                    image: imageUrl,  // استخدام image بدلاً من image_url
                     barcode: barcodeValue
                   })
 
@@ -511,7 +511,7 @@ export default function ProductSidebar({ isOpen, onClose, onProductCreated, crea
           .map(d => ({
             id: d.id,
             name: d.name || '',
-            image_url: d.image_url || undefined,
+            image: d.image_url || undefined,  // استخدام image بدلاً من image_url
             barcode: d.barcode || undefined
           }))
 
@@ -1678,10 +1678,10 @@ export default function ProductSidebar({ isOpen, onClose, onProductCreated, crea
     // Upload color images
     const updatedColors = await Promise.all(
       productColors.map(async (color) => {
-        if (color.image && color.image.startsWith('blob:')) {
+        if (color.image && (color.image.startsWith('blob:') || color.image.startsWith('data:'))) {
           console.log(`📤 Uploading image for color: ${color.name}`)
           try {
-            // Convert blob URL to File
+            // Convert blob URL or data URL to File
             const response = await fetch(color.image)
             const blob = await response.blob()
             const file = new File([blob], `color-${color.name}.jpg`, { type: 'image/jpeg' })
@@ -1704,10 +1704,10 @@ export default function ProductSidebar({ isOpen, onClose, onProductCreated, crea
     // Upload shape images
     const updatedShapes = await Promise.all(
       productShapes.map(async (shape) => {
-        if (shape.image && shape.image.startsWith('blob:')) {
+        if (shape.image && (shape.image.startsWith('blob:') || shape.image.startsWith('data:'))) {
           console.log(`📤 Uploading image for shape: ${shape.name || 'شكل'}`)
           try {
-            // Convert blob URL to File
+            // Convert blob URL or data URL to File
             const response = await fetch(shape.image)
             const blob = await response.blob()
             const file = new File([blob], `shape-${shape.name || 'shape'}.jpg`, { type: 'image/jpeg' })
@@ -2690,7 +2690,12 @@ export default function ProductSidebar({ isOpen, onClose, onProductCreated, crea
                       const file = e.dataTransfer.files[0]
                       if (file && file.type.startsWith('image/')) {
                         setShapeImageFile(file)
-                        setShapeImagePreview(URL.createObjectURL(file))
+                        // Convert to data URL for persistent storage
+                        const reader = new FileReader()
+                        reader.onloadend = () => {
+                          setShapeImagePreview(reader.result as string)
+                        }
+                        reader.readAsDataURL(file)
                       }
                     }}
                   >
@@ -2729,7 +2734,12 @@ export default function ProductSidebar({ isOpen, onClose, onProductCreated, crea
                               const file = e.target.files?.[0]
                               if (file) {
                                 setShapeImageFile(file)
-                                setShapeImagePreview(URL.createObjectURL(file))
+                                // Convert to data URL for persistent storage
+                                const reader = new FileReader()
+                                reader.onloadend = () => {
+                                  setShapeImagePreview(reader.result as string)
+                                }
+                                reader.readAsDataURL(file)
                               }
                             }}
                             className="hidden"
@@ -2904,7 +2914,12 @@ export default function ProductSidebar({ isOpen, onClose, onProductCreated, crea
                       const file = e.dataTransfer.files[0]
                       if (file && file.type.startsWith('image/')) {
                         setColorImageFile(file)
-                        setColorImagePreview(URL.createObjectURL(file))
+                        // Convert to data URL for persistent storage
+                        const reader = new FileReader()
+                        reader.onloadend = () => {
+                          setColorImagePreview(reader.result as string)
+                        }
+                        reader.readAsDataURL(file)
                       }
                     }}
                   >
@@ -2943,7 +2958,12 @@ export default function ProductSidebar({ isOpen, onClose, onProductCreated, crea
                               const file = e.target.files?.[0]
                               if (file) {
                                 setColorImageFile(file)
-                                setColorImagePreview(URL.createObjectURL(file))
+                                // Convert to data URL for persistent storage
+                                const reader = new FileReader()
+                                reader.onloadend = () => {
+                                  setColorImagePreview(reader.result as string)
+                                }
+                                reader.readAsDataURL(file)
                               }
                             }}
                             className="hidden"
