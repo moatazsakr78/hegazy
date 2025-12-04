@@ -324,7 +324,8 @@
       "Bash(vercel ls:*)",
       "Bash(start cmd /c \"echo افتح Chrome DevTools وابعتلي صورة من Console && pause\")",
       "Bash(start http://localhost:3000/admin/products)",
-      "Bash(mcp__supabase__execute_sql \"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = ''product_shapes'' ORDER BY ordinal_position;\")"
+      "Bash(mcp__supabase__execute_sql \"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = ''product_shapes'' ORDER BY ordinal_position;\")",
+      "Bash(start cmd /c \"npm run dev\")"
     ],
     "deny": [],
     "additionalDirectories": [

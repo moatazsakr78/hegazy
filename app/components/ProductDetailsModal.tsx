@@ -718,24 +718,11 @@ export default function ProductDetailsModal({
               ).sort((a: any, b: any) => (b.quantity || 0) - (a.quantity || 0))
             : []) as ProductColor[], // Sort by total quantity descending
           shapes: shapeVariants && shapeVariants.length > 0
-            ? Object.values(
-                shapeVariants.reduce((acc: any, variant: any) => {
-                  const shapeKey = variant.name;
-                  if (!acc[shapeKey]) {
-                    acc[shapeKey] = {
-                      id: variant.id,
-                      name: shapeKey,
-                      image_url: variant.image_url,
-                      quantity: 0
-                    };
-                  }
-                  // Sum quantities from all branches
-                  acc[shapeKey].quantity += variant.quantity || 0;
-                  return acc;
-                }, {})
-              ).map((shape: any) => ({
-                ...shape,
-                available: (shape.quantity || 0) > 0
+            ? shapeVariants.map((variant: any) => ({
+                id: variant.id,
+                name: variant.name || null,
+                image_url: variant.image_url || null,
+                available: true  // Always available by default
               }))
             : [],
           sizes: [
@@ -1592,28 +1579,56 @@ export default function ProductDetailsModal({
                         }
                       }}
                       disabled={!shape.available}
-                      className={`px-3 py-1 border-2 rounded-lg transition-all text-sm ${
+                      className={`relative border-2 rounded-lg transition-all overflow-hidden ${
                         selectedShape?.id === shape.id
-                          ? 'border-red-500 bg-red-50 text-red-600 font-semibold'
+                          ? 'border-red-500 shadow-lg'
                           : shape.available
-                          ? 'border-gray-300 hover:border-red-300 bg-white hover:bg-red-50'
-                          : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                          ? 'border-gray-300 hover:border-red-300'
+                          : 'border-gray-200 opacity-50 cursor-not-allowed'
                       }`}
-                      title={shape.name}
+                      title={shape.name || 'شكل'}
                     >
-                      {shape.name}
-                      {selectedShape?.id === shape.id && (
-                        <span className="mr-1">
-                          <svg className="w-3 h-3 inline" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </span>
+                      {/* Show image if available */}
+                      {shape.image_url ? (
+                        <div className="relative">
+                          <img
+                            src={shape.image_url}
+                            alt={shape.name || 'شكل'}
+                            className="w-16 h-16 object-cover"
+                          />
+                          {/* Checkmark when selected */}
+                          {selectedShape?.id === shape.id && (
+                            <div className="absolute top-0 right-0 bg-red-500 rounded-bl-lg p-0.5">
+                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        /* Show text if no image */
+                        <div className={`px-3 py-1 text-sm ${
+                          selectedShape?.id === shape.id
+                            ? 'bg-red-50 text-red-600 font-semibold'
+                            : shape.available
+                            ? 'bg-white hover:bg-red-50'
+                            : 'bg-gray-100 text-gray-400'
+                        }`}>
+                          {shape.name || 'شكل'}
+                          {selectedShape?.id === shape.id && (
+                            <span className="mr-1">
+                              <svg className="w-3 h-3 inline" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </span>
+                          )}
+                        </div>
                       )}
                     </button>
                   ))}
                 </div>
                 {selectedShape && (
-                  <p className="text-xs text-gray-600 mt-1">الشكل المحدد: {selectedShape?.name}</p>
+                  <p className="text-xs text-gray-600 mt-1">الشكل المحدد: {selectedShape?.name || 'شكل محدد'}</p>
                 )}
               </div>
             )}
