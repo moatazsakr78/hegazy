@@ -1,7 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { isImagePreloaded } from '@/lib/utils/imagePreloader'
 
 interface OptimizedImageProps {
   src: string | null | undefined
@@ -51,7 +52,17 @@ export default function OptimizedImage({
   unoptimized = false
 }: OptimizedImageProps) {
   const [hasError, setHasError] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  // Start with isLoading=false if image is already preloaded in our cache
+  const [isLoading, setIsLoading] = useState(() => !isImagePreloaded(src))
+
+  // Update loading state when src changes
+  useEffect(() => {
+    if (src && isImagePreloaded(src)) {
+      setIsLoading(false)
+    } else if (src) {
+      setIsLoading(true)
+    }
+  }, [src])
 
   const handleError = useCallback((error: any) => {
     setHasError(true)

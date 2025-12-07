@@ -12,6 +12,7 @@ import {
 } from "../../components/ui/OptimizedImage";
 import { usePerformanceMonitor } from "../../lib/utils/performanceMonitor";
 import { useSystemCurrency, useFormatPrice } from "@/lib/hooks/useCurrency";
+import { preloadImagesInBackground, getPreloadStats } from "@/lib/utils/imagePreloader";
 
 // Editable Field Component for inline editing
 interface EditableFieldProps {
@@ -161,6 +162,7 @@ function POSPageContent() {
     switchTab,
     updateActiveTabCart,
     updateActiveTabSelections,
+    updateActiveTabMode,
     clearActiveTabCart,
     isLoading: isLoadingTabs,
   } = usePOSTabs();
@@ -690,29 +692,133 @@ function POSPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Intentionally empty - fetchCategories and performance monitors are internal
 
-  // Sync cart with active tab
+  // Sync cart with active tab - wait for tabs to load from database first
   useEffect(() => {
+    // Don't sync until tabs are loaded from database
+    if (isLoadingTabs) {
+      return;
+    }
+
     if (activePOSTab) {
+      console.log('POS: Syncing cart from active tab:', activePOSTab.id, 'Items:', activePOSTab.cartItems?.length || 0);
       setCartItems(activePOSTab.cartItems || []);
     }
-  }, [activeTabId, activePOSTab]);
+  }, [activeTabId, activePOSTab, isLoadingTabs]);
+
+  // Sync modes and selections from active tab after loading
+  useEffect(() => {
+    if (isLoadingTabs || !activePOSTab) {
+      return;
+    }
+
+    // Restore modes from saved tab
+    if (activePOSTab.isPurchaseMode !== undefined) {
+      setIsPurchaseMode(activePOSTab.isPurchaseMode);
+    }
+    if (activePOSTab.isTransferMode !== undefined) {
+      setIsTransferMode(activePOSTab.isTransferMode);
+    }
+    if (activePOSTab.isReturnMode !== undefined) {
+      setIsReturnMode(activePOSTab.isReturnMode);
+    }
+    if (activePOSTab.selectedSupplier !== undefined) {
+      setSelectedSupplier(activePOSTab.selectedSupplier);
+    }
+    if (activePOSTab.selectedWarehouse !== undefined) {
+      setSelectedWarehouse(activePOSTab.selectedWarehouse);
+    }
+    if (activePOSTab.transferFromLocation !== undefined) {
+      setTransferFromLocation(activePOSTab.transferFromLocation);
+    }
+    if (activePOSTab.transferToLocation !== undefined) {
+      setTransferToLocation(activePOSTab.transferToLocation);
+    }
+
+    console.log('POS: Restored modes from tab:', {
+      isPurchaseMode: activePOSTab.isPurchaseMode,
+      isTransferMode: activePOSTab.isTransferMode,
+      isReturnMode: activePOSTab.isReturnMode,
+    });
+  }, [activeTabId, activePOSTab, isLoadingTabs]);
+
+  // Save modes to tab when they change
+  useEffect(() => {
+    if (isLoadingTabs || !activePOSTab) {
+      return;
+    }
+
+    // Only save if modes actually changed from what's in the tab
+    const modesChanged =
+      activePOSTab.isPurchaseMode !== isPurchaseMode ||
+      activePOSTab.isTransferMode !== isTransferMode ||
+      activePOSTab.isReturnMode !== isReturnMode ||
+      JSON.stringify(activePOSTab.selectedSupplier) !== JSON.stringify(selectedSupplier) ||
+      JSON.stringify(activePOSTab.selectedWarehouse) !== JSON.stringify(selectedWarehouse) ||
+      JSON.stringify(activePOSTab.transferFromLocation) !== JSON.stringify(transferFromLocation) ||
+      JSON.stringify(activePOSTab.transferToLocation) !== JSON.stringify(transferToLocation);
+
+    if (modesChanged) {
+      updateActiveTabMode({
+        isPurchaseMode,
+        isTransferMode,
+        isReturnMode,
+        selectedSupplier,
+        selectedWarehouse,
+        transferFromLocation,
+        transferToLocation,
+      });
+    }
+  }, [isPurchaseMode, isTransferMode, isReturnMode, selectedSupplier, selectedWarehouse, transferFromLocation, transferToLocation, isLoadingTabs, activePOSTab, updateActiveTabMode]);
 
   // OPTIMIZED: Memoized product filtering to prevent unnecessary re-renders
-  const filteredProducts = useMemo(() => {
-    if (!searchQuery) return products;
+  // Returns Set of matching product IDs for O(1) lookup
+  const filteredProductIds = useMemo(() => {
+    if (!searchQuery) return null; // null means show all
 
     const query = searchQuery.toLowerCase();
-    return products.filter(
-      (product) =>
+    const matchingIds = new Set<string>();
+    products.forEach((product) => {
+      if (
         product.name.toLowerCase().includes(query) ||
-        (product.barcode && product.barcode.toLowerCase().includes(query)),
-    );
+        (product.barcode && product.barcode.toLowerCase().includes(query))
+      ) {
+        matchingIds.add(product.id);
+      }
+    });
+    return matchingIds;
   }, [products, searchQuery]);
+
+  // Helper function to check if product matches search
+  const isProductVisible = useCallback((productId: string) => {
+    return filteredProductIds === null || filteredProductIds.has(productId);
+  }, [filteredProductIds]);
+
+  // For backward compatibility - filtered products array (used for count display etc.)
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery) return products;
+    return products.filter((p) => filteredProductIds?.has(p.id));
+  }, [products, searchQuery, filteredProductIds]);
 
   // OPTIMIZED: Memoized refresh handler
   const handleRefresh = useCallback(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  // OPTIMIZED: Preload product images in background for faster rendering
+  useEffect(() => {
+    if (isLoading || products.length === 0) {
+      return;
+    }
+
+    // Extract all image URLs from products
+    const imageUrls = products.map(p => p.main_image_url).filter(Boolean);
+
+    // Preload in background without blocking UI
+    preloadImagesInBackground(imageUrls, () => {
+      const stats = getPreloadStats();
+      console.log(`POS: Preloaded ${stats.preloaded} images in background`);
+    });
+  }, [products, isLoading]);
 
   // OPTIMIZED: Memoized POS Cart Functions
   const handleAddToCart = useCallback(
@@ -2851,10 +2957,13 @@ function POSPageContent() {
                     <div className="flex-1 overflow-hidden">
                       <div className="h-full overflow-y-auto scrollbar-hide p-4">
                         <div className="grid gap-4 grid-cols-2 md:grid-cols-6">
-                          {filteredProducts.map((product, index) => (
+                          {/* OPTIMIZED: Use CSS visibility to hide products instead of filtering */}
+                          {/* This keeps images loaded in DOM and prevents re-loading on search changes */}
+                          {products.map((product, index) => (
                             <div
                               key={product.id}
                               onClick={() => {
+                                if (!isProductVisible(product.id)) return; // Don't allow clicks on hidden products
                                 if (selectedProduct?.id === product.id) {
                                   setSelectedProduct(null);
                                 } else {
@@ -2866,7 +2975,7 @@ function POSPageContent() {
                                 selectedProduct?.id === product.id
                                   ? "border-blue-500 bg-[#434E61]"
                                   : "border-transparent hover:border-gray-500 hover:bg-[#434E61]"
-                              }`}
+                              } ${!isProductVisible(product.id) ? "hidden" : ""}`}
                             >
                               {/* Product Image */}
                               <div className="mb-3 relative">
