@@ -11,6 +11,7 @@ import SupplierGroupSidebar from '../../components/SupplierGroupSidebar'
 import SupplierDetailsModal from '../../components/SupplierDetailsModal'
 import ColumnsControlModal from '../../components/ColumnsControlModal'
 import SuppliersGridView from '../../components/SuppliersGridView'
+import MergeSuppliersModal from '../../components/MergeSuppliersModal'
 import { useSupplierGroups, SupplierGroup } from '../../lib/hooks/useSupplierGroups'
 import { useSuppliers, Supplier, DEFAULT_SUPPLIER_ID } from '../../lib/hooks/useSuppliers'
 import {
@@ -32,7 +33,8 @@ import {
   MinusIcon,
   FolderIcon,
   FolderOpenIcon,
-  UserPlusIcon
+  UserPlusIcon,
+  ArrowsRightLeftIcon
 } from '@heroicons/react/24/outline'
 import { ranks } from '@/app/lib/data/ranks'
 import Image from 'next/image'
@@ -246,6 +248,7 @@ export default function SuppliersPage() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid')
   const [isGroupsHidden, setIsGroupsHidden] = useState(true)
   const [showColumnsModal, setShowColumnsModal] = useState(false)
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState<{[key: string]: boolean}>({})
   
   // Use the real-time hooks for supplier groups and suppliers
@@ -648,6 +651,14 @@ export default function SuppliersPage() {
               <span className="text-sm">ترتيب</span>
             </button>
 
+            <button
+              onClick={() => setIsMergeModalOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-600/30 rounded-md cursor-pointer whitespace-nowrap transition-colors"
+            >
+              <ArrowsRightLeftIcon className="h-4 w-4" />
+              <span className="text-sm">دمج الموردين</span>
+            </button>
+
             {viewMode === 'table' && (
               <button
                 onClick={() => setShowColumnsModal(true)}
@@ -952,6 +963,17 @@ export default function SuppliersPage() {
         onClose={() => setShowColumnsModal(false)}
         columns={getAllColumns()}
         onColumnsChange={handleColumnsChange}
+      />
+
+      {/* Merge Suppliers Modal */}
+      <MergeSuppliersModal
+        isOpen={isMergeModalOpen}
+        onClose={() => setIsMergeModalOpen(false)}
+        onMergeComplete={() => {
+          // Refresh is handled automatically by real-time hook
+          setSelectedSupplier(null)
+        }}
+        preSelectedSupplier={selectedSupplier}
       />
     </div>
   )

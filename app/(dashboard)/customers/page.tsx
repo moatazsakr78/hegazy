@@ -664,7 +664,7 @@ export default function CustomersPage() {
               className="flex items-center gap-2 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-600/30 rounded-md cursor-pointer whitespace-nowrap transition-colors"
             >
               <ArrowsRightLeftIcon className="h-4 w-4" />
-              <span className="text-sm">دمج الحسابات</span>
+              <span className="text-sm">دمج العملاء</span>
             </button>
 
             {viewMode === 'table' && (
