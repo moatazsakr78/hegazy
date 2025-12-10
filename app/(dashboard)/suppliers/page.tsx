@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+
+// Local storage key for suppliers column visibility
+const SUPPLIERS_COLUMN_VISIBILITY_KEY = 'suppliers-column-visibility-v2'
 import { supabase } from '../../lib/supabase/client'
 import ResizableTable from '../../components/tables/ResizableTable'
 import Sidebar from '../../components/layout/Sidebar'
@@ -250,6 +253,7 @@ export default function SuppliersPage() {
   const [showColumnsModal, setShowColumnsModal] = useState(false)
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState<{[key: string]: boolean}>({})
+  const suppliersVisibilityLoadedRef = useRef(false)
   
   // Use the real-time hooks for supplier groups and suppliers
   const { groups, isLoading: groupsLoading, error: groupsError, toggleGroup } = useSupplierGroups()
@@ -264,14 +268,40 @@ export default function SuppliersPage() {
     }))
   }
 
-  // Handle columns visibility change
-  const handleColumnsChange = (updatedColumns: any[]) => {
+  // Load column visibility from localStorage on mount
+  useEffect(() => {
+    if (suppliersVisibilityLoadedRef.current) return
+
+    try {
+      const savedData = localStorage.getItem(SUPPLIERS_COLUMN_VISIBILITY_KEY)
+      if (savedData) {
+        const parsed = JSON.parse(savedData)
+        setVisibleColumns(parsed)
+        console.log('✅ Loaded suppliers column visibility from localStorage')
+      }
+      suppliersVisibilityLoadedRef.current = true
+    } catch (error) {
+      console.error('Error loading suppliers column visibility:', error)
+      suppliersVisibilityLoadedRef.current = true
+    }
+  }, [])
+
+  // Handle columns visibility change - saves to localStorage
+  const handleColumnsChange = useCallback((updatedColumns: any[]) => {
     const newVisibleColumns: {[key: string]: boolean} = {}
     updatedColumns.forEach(col => {
       newVisibleColumns[col.id] = col.visible
     })
     setVisibleColumns(newVisibleColumns)
-  }
+
+    // Save to localStorage
+    try {
+      localStorage.setItem(SUPPLIERS_COLUMN_VISIBILITY_KEY, JSON.stringify(newVisibleColumns))
+      console.log('✅ Saved suppliers column visibility to localStorage')
+    } catch (error) {
+      console.error('Error saving suppliers column visibility:', error)
+    }
+  }, [])
 
   // Filter visible columns
   const visibleTableColumns = tableColumns.filter(col => visibleColumns[col.id] !== false)

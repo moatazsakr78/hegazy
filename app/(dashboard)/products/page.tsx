@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import ProductsTabletView from '../../components/ProductsTabletView'
 import { supabase } from '../../lib/supabase/client'
 import { ProductGridImage, ProductModalImage, ProductThumbnail } from '../../components/ui/OptimizedImage'
@@ -20,6 +20,8 @@ import BarcodePrintModal from '../../components/BarcodePrintModal'
 import { useBranches, Branch, ProductVariant } from '../../lib/hooks/useBranches'
 import { useProductsAdmin } from '../../../lib/hooks/useProductsAdmin'
 import { Product } from '../../lib/hooks/useProductsOptimized'
+// Local storage key for products column visibility
+const PRODUCTS_COLUMN_VISIBILITY_KEY = 'products-column-visibility-v2'
 import {
   ArrowPathIcon,
   FolderPlusIcon,
@@ -179,21 +181,62 @@ export default function ProductsPage() {
     setShowBranchesDropdown(false)
   }, [selectedBranches])
 
-  // Initialize visible columns state
+  // Track if columns visibility has been loaded from storage
+  const visibilityLoadedRef = useRef(false)
+
+  // Initialize visible columns state - load from localStorage
   useEffect(() => {
-    const allColumns = ['index', 'name', 'group', 'totalQuantity', 'buyPrice', 'sellPrice', 'wholeSalePrice', 'sellPrice1', 'sellPrice2', 'sellPrice3', 'sellPrice4', 'location', 'barcode', 'activity']
-    
+    // Only load once per session
+    if (visibilityLoadedRef.current) return
+    if (branches.length === 0) return
+
+    const allColumnIds = ['index', 'name', 'group', 'totalQuantity', 'buyPrice', 'sellPrice', 'wholeSalePrice', 'sellPrice1', 'sellPrice2', 'sellPrice3', 'sellPrice4', 'location', 'barcode', 'activity']
+
     // Add branch columns
     branches.forEach(branch => {
-      allColumns.push(`branch_${branch.id}`, `min_stock_${branch.id}`, `variants_${branch.id}`)
+      allColumnIds.push(`branch_${branch.id}`, `min_stock_${branch.id}`, `variants_${branch.id}`)
     })
-    
-    const initialVisible: {[key: string]: boolean} = {}
-    allColumns.forEach(colId => {
-      initialVisible[colId] = true // Initially all columns are visible
-    })
-    
-    setVisibleColumns(initialVisible)
+
+    try {
+      // Load from localStorage
+      const savedData = localStorage.getItem(PRODUCTS_COLUMN_VISIBILITY_KEY)
+
+      if (savedData) {
+        const parsed = JSON.parse(savedData)
+        console.log('✅ Loaded column visibility from localStorage:', parsed)
+
+        // Merge with all column IDs (for new columns not in saved config)
+        const mergedVisible: {[key: string]: boolean} = {}
+        allColumnIds.forEach(colId => {
+          // Use saved value if exists, otherwise default to true
+          mergedVisible[colId] = parsed[colId] !== undefined ? parsed[colId] : true
+        })
+
+        const hiddenCount = Object.values(mergedVisible).filter(v => !v).length
+        console.log(`📊 Hidden columns: ${hiddenCount}`)
+
+        setVisibleColumns(mergedVisible)
+      } else {
+        console.log('⚠️ No saved config found, using defaults (all visible)')
+        // No saved config, use defaults (all visible)
+        const defaultVisible: {[key: string]: boolean} = {}
+        allColumnIds.forEach(colId => {
+          defaultVisible[colId] = true
+        })
+        setVisibleColumns(defaultVisible)
+      }
+
+      visibilityLoadedRef.current = true
+    } catch (error) {
+      console.error('❌ Error loading column visibility:', error)
+      // Fallback to all visible
+      const fallbackVisible: {[key: string]: boolean} = {}
+      allColumnIds.forEach(colId => {
+        fallbackVisible[colId] = true
+      })
+      setVisibleColumns(fallbackVisible)
+      visibilityLoadedRef.current = true
+    }
   }, [branches])
 
   // Handle scroll to hide/show toolbar like in the image
@@ -643,13 +686,25 @@ export default function ProductsPage() {
     setShowDeleteProductConfirm(false)
   }
 
-  // OPTIMIZED: Memoized columns change handler
+  // OPTIMIZED: Memoized columns change handler - saves to localStorage
   const handleColumnsChange = useCallback((updatedColumns: {id: string, header: string, visible: boolean}[]) => {
     const newVisibleColumns: {[key: string]: boolean} = {}
     updatedColumns.forEach(col => {
       newVisibleColumns[col.id] = col.visible
     })
     setVisibleColumns(newVisibleColumns)
+
+    const visibleCount = updatedColumns.filter(c => c.visible).length
+    const hiddenCount = updatedColumns.filter(c => !c.visible).length
+    console.log(`🔄 Columns changed: ${visibleCount} visible, ${hiddenCount} hidden`)
+
+    // Save to localStorage directly
+    try {
+      localStorage.setItem(PRODUCTS_COLUMN_VISIBILITY_KEY, JSON.stringify(newVisibleColumns))
+      console.log('✅ Saved column visibility to localStorage!')
+    } catch (error) {
+      console.error('❌ Error saving column visibility:', error)
+    }
   }, [])
 
   // OPTIMIZED: Memoized columns data preparation
@@ -1078,6 +1133,7 @@ export default function ProductsPage() {
                   columns={dynamicTableColumns}
                   data={filteredProducts}
                   selectedRowId={selectedProduct?.id || null}
+                  reportType="PRODUCTS_REPORT"
                   onRowClick={(product, index) => {
                     // Toggle selection: if already selected, deselect it
                     if (selectedProduct?.id === product.id) {

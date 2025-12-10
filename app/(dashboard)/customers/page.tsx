@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+
+// Local storage key for customers column visibility
+const CUSTOMERS_COLUMN_VISIBILITY_KEY = 'customers-column-visibility-v2'
 import { supabase } from '../../lib/supabase/client'
 import ResizableTable from '../../components/tables/ResizableTable'
 import Sidebar from '../../components/layout/Sidebar'
@@ -253,6 +256,7 @@ export default function CustomersPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showColumnsModal, setShowColumnsModal] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState<{[key: string]: boolean}>({})
+  const customersVisibilityLoadedRef = useRef(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid')
   const [isGroupsHidden, setIsGroupsHidden] = useState(true)
@@ -271,14 +275,40 @@ export default function CustomersPage() {
     }))
   }
 
-  // Handle columns visibility change
-  const handleColumnsChange = (updatedColumns: any[]) => {
+  // Load column visibility from localStorage on mount
+  useEffect(() => {
+    if (customersVisibilityLoadedRef.current) return
+
+    try {
+      const savedData = localStorage.getItem(CUSTOMERS_COLUMN_VISIBILITY_KEY)
+      if (savedData) {
+        const parsed = JSON.parse(savedData)
+        setVisibleColumns(parsed)
+        console.log('✅ Loaded customers column visibility from localStorage')
+      }
+      customersVisibilityLoadedRef.current = true
+    } catch (error) {
+      console.error('Error loading customers column visibility:', error)
+      customersVisibilityLoadedRef.current = true
+    }
+  }, [])
+
+  // Handle columns visibility change - saves to localStorage
+  const handleColumnsChange = useCallback((updatedColumns: any[]) => {
     const newVisibleColumns: {[key: string]: boolean} = {}
     updatedColumns.forEach(col => {
       newVisibleColumns[col.id] = col.visible
     })
     setVisibleColumns(newVisibleColumns)
-  }
+
+    // Save to localStorage
+    try {
+      localStorage.setItem(CUSTOMERS_COLUMN_VISIBILITY_KEY, JSON.stringify(newVisibleColumns))
+      console.log('✅ Saved customers column visibility to localStorage')
+    } catch (error) {
+      console.error('Error saving customers column visibility:', error)
+    }
+  }, [])
 
   // Filter visible columns
   const visibleTableColumns = tableColumns.filter(col => visibleColumns[col.id] !== false)

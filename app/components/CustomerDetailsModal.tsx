@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { MagnifyingGlassIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, PencilSquareIcon, TrashIcon, TableCellsIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, PencilSquareIcon, TrashIcon, TableCellsIcon, CalendarDaysIcon, PrinterIcon } from '@heroicons/react/24/outline'
 import ResizableTable from './tables/ResizableTable'
 import { supabase } from '../lib/supabase/client'
 import ConfirmDeleteModal from './ConfirmDeleteModal'
@@ -517,6 +517,358 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
       setSaleItems([])
     } finally {
       setIsLoadingItems(false)
+    }
+  }
+
+  // Print receipt function
+  const printReceipt = async (sale: any, items: any[]) => {
+    if (!sale || items.length === 0) {
+      alert('لا توجد بيانات للطباعة')
+      return
+    }
+
+    // Calculate customer balance
+    let calculatedBalance = 0
+    if (customer && customer.id !== '00000000-0000-0000-0000-000000000001') {
+      const [salesRes, paymentsRes] = await Promise.all([
+        supabase.from('sales').select('total_amount').eq('customer_id', customer.id),
+        supabase.from('customer_payments').select('amount').eq('customer_id', customer.id)
+      ])
+      const salesTotal = (salesRes.data || []).reduce((sum, s) => sum + (s.total_amount || 0), 0)
+      const paymentsTotal = (paymentsRes.data || []).reduce((sum, p) => sum + (p.amount || 0), 0)
+      calculatedBalance = salesTotal - paymentsTotal
+    }
+
+    // Get branch info
+    const { data: branchData } = await supabase
+      .from('branches')
+      .select('name, phone')
+      .limit(1)
+      .single()
+
+    // Number to Arabic words function
+    const numberToArabicWords = (num: number): string => {
+      const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة', 'عشرة',
+        'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر']
+      const tens = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون']
+      const hundreds = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة']
+
+      if (num === 0) return 'صفر'
+      if (num < 0) return 'سالب ' + numberToArabicWords(Math.abs(num))
+
+      const intNum = Math.floor(num)
+      let result = ''
+
+      const hundredsDigit = Math.floor(intNum / 100)
+      const tensDigit = Math.floor((intNum % 100) / 10)
+      const onesDigit = intNum % 10
+
+      if (hundredsDigit > 0) {
+        result += hundreds[hundredsDigit]
+        if (tensDigit > 0 || onesDigit > 0) result += ' و'
+      }
+
+      if (intNum % 100 < 20) {
+        result += ones[intNum % 100]
+      } else {
+        if (tensDigit > 0) {
+          result += tens[tensDigit]
+          if (onesDigit > 0) result += ' و'
+        }
+        if (onesDigit > 0) result += ones[onesDigit]
+      }
+
+      return result.trim().replace(/\s*و$/, '')
+    }
+
+    // Check if customer has any balance (for showing total debt)
+    const showTotalDebt = customer && customer.id !== '00000000-0000-0000-0000-000000000001' && calculatedBalance !== 0
+    const logoUrl = window.location.origin + '/assets/logo/El Farouk Group2.png'
+
+    const receiptContent = `
+      <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title>فاتورة رقم ${sale.invoice_number}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+
+            body {
+              font-family: 'Arial', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              font-size: 13px;
+              line-height: 1.3;
+              color: #000;
+              background: white;
+              width: 100%;
+              margin: 0;
+              padding: 0;
+            }
+
+            .receipt-header {
+              text-align: center;
+              margin-bottom: 3px;
+              padding: 0 2px;
+            }
+
+            .company-logo {
+              width: 60px;
+              height: auto;
+              margin: 0 auto 4px auto;
+              display: block;
+              max-height: 60px;
+              object-fit: contain;
+            }
+
+            .company-logo-fallback {
+              display: none;
+            }
+
+            .company-name {
+              font-size: 18px;
+              font-weight: 700;
+              margin-bottom: 2px;
+              color: #000;
+            }
+
+            .receipt-date {
+              font-size: 11px;
+              margin-bottom: 1px;
+            }
+
+            .receipt-address {
+              font-size: 10px;
+              margin-bottom: 1px;
+            }
+
+            .receipt-phone {
+              font-size: 10px;
+            }
+
+            .customer-info {
+              margin: 10px 20px;
+              padding: 8px;
+              border: 1px dashed #333;
+              background-color: #f9f9f9;
+            }
+
+            .customer-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 2px 0;
+              font-size: 11px;
+            }
+
+            .customer-label {
+              font-weight: 600;
+              color: #333;
+            }
+
+            .customer-value {
+              color: #000;
+            }
+
+            .items-table {
+              width: calc(100% - 40px);
+              border-collapse: collapse;
+              margin: 3px 20px;
+              border: 1px solid #000;
+              table-layout: fixed;
+            }
+
+            .items-table th,
+            .items-table td {
+              border: 1px solid #000;
+              padding: 7px;
+              text-align: center;
+              font-size: 14px;
+              font-weight: 400;
+            }
+
+            .items-table th {
+              background-color: #f5f5f5;
+              font-weight: 600;
+              font-size: 14px;
+            }
+
+            .items-table th:nth-child(1),
+            .items-table td:nth-child(1) {
+              width: 45%;
+            }
+
+            .items-table th:nth-child(2),
+            .items-table td:nth-child(2) {
+              width: 12%;
+            }
+
+            .items-table th:nth-child(3),
+            .items-table td:nth-child(3) {
+              width: 18%;
+            }
+
+            .items-table th:nth-child(4),
+            .items-table td:nth-child(4) {
+              width: 25%;
+              text-align: right !important;
+              padding-right: 4px !important;
+            }
+
+            .item-name {
+              text-align: right !important;
+              padding-right: 12px !important;
+              padding-left: 2px !important;
+              font-size: 15px;
+              font-weight: bold;
+              word-wrap: break-word;
+              white-space: normal;
+              overflow-wrap: break-word;
+            }
+
+            .total-row {
+              border-top: 2px solid #000;
+              font-weight: 700;
+              font-size: 12px;
+            }
+
+            .payment-section {
+              margin-top: 8px;
+              text-align: center;
+              font-size: 11px;
+              padding: 0 2px;
+            }
+
+            .total-debt {
+              margin: 10px 20px;
+              padding: 8px;
+              border: 1px solid #000;
+              background-color: #f5f5f5;
+              text-align: center;
+              font-weight: 600;
+              font-size: 14px;
+            }
+
+            .footer {
+              text-align: center;
+              margin-top: 8px;
+              font-size: 9px;
+              border-top: 1px solid #000;
+              padding: 3px 2px 0 2px;
+            }
+
+            @media print {
+              @page {
+                size: 80mm auto;
+                margin: 0;
+              }
+
+              body {
+                width: 80mm !important;
+                max-width: 80mm !important;
+                margin: 0 !important;
+                padding: 0 1.5mm !important;
+              }
+
+              .no-print {
+                display: none;
+              }
+
+              .items-table {
+                margin: 3px 0;
+                width: 100% !important;
+              }
+
+              .items-table th,
+              .items-table td {
+                padding: 2px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="receipt-header">
+            <img
+              src="${logoUrl}"
+              alt="El Farouk Group"
+              class="company-logo"
+              onerror="this.style.display='none'; document.querySelector('.company-logo-fallback').style.display='block';"
+            />
+            <div class="company-logo-fallback" style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 4px;">🏢</div>
+            <div class="company-name">El Farouk Group</div>
+            <div class="receipt-date">${new Date(sale.created_at).toLocaleDateString("ar-EG")} - ${new Date(sale.created_at).toLocaleDateString("en-US")}</div>
+            <div class="receipt-address">${branchData?.name || "الفرع الرئيسي"}</div>
+            <div class="receipt-phone">${branchData?.phone || "01102862856"}</div>
+          </div>
+
+          ${customer && customer.id !== '00000000-0000-0000-0000-000000000001' && (customer.name || customer.phone || customer.address || customer.city) ? `
+          <div class="customer-info">
+            ${customer.name ? `<div class="customer-row"><span class="customer-label">العميل:</span> <span class="customer-value">${customer.name}</span></div>` : ''}
+            ${customer.phone ? `<div class="customer-row"><span class="customer-label">الهاتف:</span> <span class="customer-value">${customer.phone}</span></div>` : ''}
+            ${customer.address ? `<div class="customer-row"><span class="customer-label">العنوان:</span> <span class="customer-value">${customer.address}</span></div>` : ''}
+            ${customer.city ? `<div class="customer-row"><span class="customer-label">المدينة:</span> <span class="customer-value">${customer.city}</span></div>` : ''}
+          </div>
+          ` : ''}
+
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th class="item-name">الصنف</th>
+                <th>كمية</th>
+                <th>سعر</th>
+                <th>قيمة</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => `
+                <tr>
+                  <td class="item-name">${item.product?.name || 'منتج'}</td>
+                  <td>${item.quantity}</td>
+                  <td>${(item.unit_price || 0).toFixed(0)}</td>
+                  <td>${((item.unit_price || 0) * item.quantity).toFixed(0)}</td>
+                </tr>
+              `).join('')}
+              <tr class="total-row">
+                <td class="item-name">-</td>
+                <td>${items.length}</td>
+                <td>= اجمالي =</td>
+                <td>${Math.abs(sale.total_amount).toFixed(0)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          ${showTotalDebt ? `
+          <div class="payment-section">
+            ${numberToArabicWords(Math.abs(sale.total_amount))} جنيهاً
+          </div>
+          <div class="total-debt">
+            إجمالي الدين: ${calculatedBalance.toFixed(0)} جنيه
+          </div>
+          ` : ''}
+
+          <div class="footer">
+            ${new Date(sale.created_at).toLocaleDateString("en-GB")} ${sale.time || new Date(sale.created_at).toLocaleTimeString("en-GB", { hour12: false })}
+          </div>
+
+          <div class="no-print" style="text-align: center; margin-top: 20px;">
+            <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">طباعة</button>
+            <button onclick="window.close()" style="padding: 10px 20px; font-size: 16px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">إغلاق</button>
+          </div>
+        </body>
+      </html>
+    `
+
+    const printWindow = window.open('', '_blank', 'width=450,height=650,scrollbars=yes,resizable=yes')
+    if (printWindow) {
+      printWindow.document.write(receiptContent)
+      printWindow.document.close()
+      printWindow.focus()
+      setTimeout(() => printWindow.print(), 500)
+    } else {
+      alert('يرجى السماح بالنوافذ المنبثقة لطباعة الفاتورة')
     }
   }
 
@@ -1468,6 +1820,14 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
                           <h3 className="text-white font-medium text-lg">
                             تفاصيل الفاتورة {selectedStatementInvoice?.invoice_number || ''}
                           </h3>
+                          <button
+                            onClick={() => printReceipt(selectedStatementInvoice, statementInvoiceItems)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                            disabled={isLoadingStatementInvoiceItems || statementInvoiceItems.length === 0}
+                          >
+                            <PrinterIcon className="h-4 w-4" />
+                            طباعة الريسيت
+                          </button>
                         </div>
 
                         {/* Invoice Details Table */}
@@ -1562,9 +1922,19 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
                         zIndex: viewMode === 'details-only' ? 20 : viewMode === 'split' ? 10 : 5
                       }}
                     >
-                      <h3 className="text-blue-400 font-medium text-right p-4 pb-2 flex-shrink-0 border-b border-gray-600">
-                        تفاصيل الفاتورة {sales[selectedTransaction]?.invoice_number || ''}
-                      </h3>
+                      <div className="flex items-center justify-between p-4 pb-2 flex-shrink-0 border-b border-gray-600">
+                        <button
+                          onClick={() => printReceipt(sales[selectedTransaction], saleItems)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                          disabled={isLoadingItems || saleItems.length === 0}
+                        >
+                          <PrinterIcon className="h-4 w-4" />
+                          طباعة الريسيت
+                        </button>
+                        <h3 className="text-blue-400 font-medium text-lg">
+                          تفاصيل الفاتورة {sales[selectedTransaction]?.invoice_number || ''}
+                        </h3>
+                      </div>
 
                       <div className="flex-1 min-h-0">
                         {isLoadingItems ? (

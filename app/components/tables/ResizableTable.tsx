@@ -122,7 +122,7 @@ function SortableHeader({ column, width, onResize, onResizeStateChange, onResize
     >
       {/* Resize areas - completely separate from draggable content */}
       <div
-        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-20"
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-20 hover:bg-blue-400/50"
         onMouseDown={(e) => {
           e.preventDefault()
           e.stopPropagation()
@@ -534,22 +534,17 @@ export default function ResizableTable({
     setColumns(prev => {
       // Only update if width actually changed to prevent unnecessary re-renders
       const currentCol = prev.find(col => col.id === columnId)
-      if (currentCol && currentCol.width === newWidth) {
-        return prev // No change needed
+      if (currentCol && Math.abs((currentCol.width || 100) - newWidth) < 1) {
+        return prev // No change needed (ignore sub-pixel changes)
       }
 
       const updatedColumns = prev.map(col =>
         col.id === columnId ? { ...col, width: newWidth } : col
       )
 
-      // Notify parent component of changes immediately for UI responsiveness
-      if (onColumnsChange) {
-        onColumnsChange(updatedColumns)
-      }
-
       return updatedColumns
     })
-  }, [onColumnsChange])
+  }, [])
 
   // Enhanced resize complete handler with immediate save
   const handleResizeComplete = useCallback((columnId: string, finalWidth: number) => {
@@ -707,17 +702,17 @@ export default function ResizableTable({
                   <td
                     key={column.id}
                     className="px-4 py-3 text-gray-300 border-r border-gray-700"
-                    style={{ 
-                      width: `${column.width}px`, 
+                    style={{
+                      width: `${column.width}px`,
                       minWidth: `${column.width}px`,
-                      maxWidth: `${column.width}px` 
+                      maxWidth: `${column.width}px`
                     }}
                   >
                     <div className="truncate">
-                      {column.render 
+                      {column.render
                         ? column.render(item[column.accessor], item, rowIndex)
-                        : column.accessor === '#' 
-                        ? rowIndex + 1 
+                        : column.accessor === '#'
+                        ? rowIndex + 1
                         : item[column.accessor]
                       }
                     </div>

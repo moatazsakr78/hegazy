@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+
+// Local storage key for inventory column visibility
+const INVENTORY_COLUMN_VISIBILITY_KEY = 'inventory-column-visibility-v2'
 import InventoryTabletView from '../../components/InventoryTabletView'
 import { ProductGridImage, ProductModalImage, ProductThumbnail } from '../../components/ui/OptimizedImage'
 import ResizableTable from '../../components/tables/ResizableTable'
@@ -75,6 +78,7 @@ export default function InventoryPage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [showColumnsModal, setShowColumnsModal] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState<{[key: string]: boolean}>({})
+  const inventoryVisibilityLoadedRef = useRef(false)
   const [isTablet, setIsTablet] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   
@@ -558,13 +562,39 @@ export default function InventoryPage() {
     }))
   }, [dynamicTableColumns, visibleColumns])
 
-  // OPTIMIZED: Memoized columns change handler
+  // Load column visibility from localStorage on mount
+  useEffect(() => {
+    if (inventoryVisibilityLoadedRef.current) return
+
+    try {
+      const savedData = localStorage.getItem(INVENTORY_COLUMN_VISIBILITY_KEY)
+      if (savedData) {
+        const parsed = JSON.parse(savedData)
+        setVisibleColumns(parsed)
+        console.log('✅ Loaded inventory column visibility from localStorage')
+      }
+      inventoryVisibilityLoadedRef.current = true
+    } catch (error) {
+      console.error('Error loading inventory column visibility:', error)
+      inventoryVisibilityLoadedRef.current = true
+    }
+  }, [])
+
+  // OPTIMIZED: Memoized columns change handler - saves to localStorage
   const handleColumnsChange = useCallback((updatedColumns: any[]) => {
     const newVisibleColumns: {[key: string]: boolean} = {}
     updatedColumns.forEach(col => {
       newVisibleColumns[col.id] = col.visible
     })
     setVisibleColumns(newVisibleColumns)
+
+    // Save to localStorage
+    try {
+      localStorage.setItem(INVENTORY_COLUMN_VISIBILITY_KEY, JSON.stringify(newVisibleColumns))
+      console.log('✅ Saved inventory column visibility to localStorage')
+    } catch (error) {
+      console.error('Error saving inventory column visibility:', error)
+    }
   }, [])
 
   // The visible columns are now handled within the memoized dynamicTableColumns

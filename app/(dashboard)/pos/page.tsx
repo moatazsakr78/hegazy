@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+
+// Local storage key for POS column visibility
+const POS_COLUMN_VISIBILITY_KEY = 'pos-column-visibility-v2';
 import { useCart, CartProvider } from "@/lib/contexts/CartContext";
 import { useCartBadge } from "@/lib/hooks/useCartBadge";
 import CartModal from "@/app/components/CartModal";
@@ -201,6 +204,7 @@ function POSPageContent() {
   const [visibleColumns, setVisibleColumns] = useState<{
     [key: string]: boolean;
   }>({});
+  const posVisibilityLoadedRef = useRef(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState<any>(null);
 
@@ -598,14 +602,40 @@ function POSPageContent() {
     }));
   };
 
-  // Handle columns visibility change
-  const handleColumnsChange = (updatedColumns: any[]) => {
+  // Load column visibility from localStorage on mount
+  useEffect(() => {
+    if (posVisibilityLoadedRef.current) return;
+
+    try {
+      const savedData = localStorage.getItem(POS_COLUMN_VISIBILITY_KEY);
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        setVisibleColumns(parsed);
+        console.log('✅ Loaded POS column visibility from localStorage');
+      }
+      posVisibilityLoadedRef.current = true;
+    } catch (error) {
+      console.error('Error loading POS column visibility:', error);
+      posVisibilityLoadedRef.current = true;
+    }
+  }, []);
+
+  // Handle columns visibility change - saves to localStorage
+  const handleColumnsChange = useCallback((updatedColumns: any[]) => {
     const newVisibleColumns: { [key: string]: boolean } = {};
     updatedColumns.forEach((col) => {
       newVisibleColumns[col.id] = col.visible;
     });
     setVisibleColumns(newVisibleColumns);
-  };
+
+    // Save to localStorage
+    try {
+      localStorage.setItem(POS_COLUMN_VISIBILITY_KEY, JSON.stringify(newVisibleColumns));
+      console.log('✅ Saved POS column visibility to localStorage');
+    } catch (error) {
+      console.error('Error saving POS column visibility:', error);
+    }
+  }, []);
 
   // Filter visible columns
   const visibleTableColumns = dynamicTableColumns.filter(
@@ -1254,6 +1284,40 @@ function POSPageContent() {
           creditAmount: creditAmount, // Pass credit amount
         });
 
+        // Fetch customer's updated data and calculate balance after invoice creation
+        let customerForReceipt = selections.customer;
+        let calculatedBalance = 0;
+        if (selections.customer && selections.customer.id !== '00000000-0000-0000-0000-000000000001') {
+          // Fetch customer basic info
+          const { data: customerData } = await supabase
+            .from('customers')
+            .select('id, name, phone, address, city')
+            .eq('id', selections.customer.id)
+            .single();
+
+          // Calculate customer balance from sales and payments
+          const [salesRes, paymentsRes] = await Promise.all([
+            supabase
+              .from('sales')
+              .select('total_amount')
+              .eq('customer_id', selections.customer.id),
+            supabase
+              .from('customer_payments')
+              .select('amount')
+              .eq('customer_id', selections.customer.id)
+          ]);
+
+          const salesTotal = (salesRes.data || []).reduce((sum, s) => sum + (s.total_amount || 0), 0);
+          const paymentsTotal = (paymentsRes.data || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+          calculatedBalance = salesTotal - paymentsTotal;
+
+          if (customerData) {
+            customerForReceipt = { ...selections.customer, ...customerData, calculatedBalance };
+          } else {
+            customerForReceipt = { ...selections.customer, calculatedBalance };
+          }
+        }
+
         // Store invoice data for printing
         setLastInvoiceData({
           invoiceNumber: result.invoiceNumber,
@@ -1262,7 +1326,7 @@ function POSPageContent() {
           isReturn: isReturnMode,
           isPurchaseMode: false,
           date: new Date(),
-          customer: selections.customer,
+          customer: customerForReceipt,
           branch: selections.branch,
           record: selections.record,
           paymentSplitData: paymentSplitData,
@@ -1568,7 +1632,30 @@ function POSPageContent() {
             .receipt-phone {
               font-size: 10px;
             }
-            
+
+            .customer-info {
+              margin: 10px 20px;
+              padding: 8px;
+              border: 1px dashed #333;
+              background-color: #f9f9f9;
+            }
+
+            .customer-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 2px 0;
+              font-size: 11px;
+            }
+
+            .customer-label {
+              font-weight: 600;
+              color: #333;
+            }
+
+            .customer-value {
+              color: #000;
+            }
+
             .items-table {
               width: calc(100% - 40px);
               border-collapse: collapse;
@@ -1720,6 +1807,22 @@ function POSPageContent() {
             <div class="receipt-phone">${selections.branch?.phone || "01102862856"}</div>
           </div>
 
+          ${
+            // Show customer info for non-default customers only (if they have at least one field)
+            dataToUse.customer &&
+            dataToUse.customer.id !== '00000000-0000-0000-0000-000000000001' &&
+            (dataToUse.customer.name || dataToUse.customer.phone || dataToUse.customer.address || dataToUse.customer.city)
+              ? `
+          <div class="customer-info">
+            ${dataToUse.customer.name ? `<div class="customer-row"><span class="customer-label">العميل:</span> <span class="customer-value">${dataToUse.customer.name}</span></div>` : ''}
+            ${dataToUse.customer.phone ? `<div class="customer-row"><span class="customer-label">الهاتف:</span> <span class="customer-value">${dataToUse.customer.phone}</span></div>` : ''}
+            ${dataToUse.customer.address ? `<div class="customer-row"><span class="customer-label">العنوان:</span> <span class="customer-value">${dataToUse.customer.address}</span></div>` : ''}
+            ${dataToUse.customer.city ? `<div class="customer-row"><span class="customer-label">المدينة:</span> <span class="customer-value">${dataToUse.customer.city}</span></div>` : ''}
+          </div>
+              `
+              : ''
+          }
+
           <table class="items-table">
             <thead>
               <tr>
@@ -1763,11 +1866,13 @@ function POSPageContent() {
             <table class="payment-table">
               <tr>
                 <th>مدفوع</th>
-                <th>مدين</th>
+                <th>مدين من الفاتورة</th>
+                <th>إجمالي الدين</th>
               </tr>
               <tr>
                 <td>${(dataToUse.totalAmount - (dataToUse.creditAmount || 0)).toFixed(0)}</td>
                 <td>${(dataToUse.creditAmount || 0).toFixed(0)}</td>
+                <td>${(dataToUse.customer?.calculatedBalance || 0).toFixed(0)}</td>
               </tr>
             </table>
           </div>
