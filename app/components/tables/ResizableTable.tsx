@@ -25,7 +25,7 @@ interface ResizableTableProps {
   onRowClick?: (item: any, index: number) => void
   onRowDoubleClick?: (item: any, index: number) => void
   selectedRowId?: string | null
-  reportType?: 'MAIN_REPORT' | 'PRODUCTS_REPORT' | 'CATEGORIES_REPORT' | 'CUSTOMERS_REPORT' // for localStorage key
+  reportType?: 'MAIN_REPORT' | 'PRODUCTS_REPORT' | 'CATEGORIES_REPORT' | 'CUSTOMERS_REPORT' | 'CUSTOMER_INVOICES_REPORT' | 'DAILY_SALES_REPORT' | 'HOURLY_SALES_REPORT' | 'PROFIT_MARGIN_REPORT' // for localStorage key
   onColumnsChange?: (columns: Column[]) => void // callback for parent component
   showToast?: (message: string, type?: 'success' | 'error' | 'info', duration?: number) => void
 }

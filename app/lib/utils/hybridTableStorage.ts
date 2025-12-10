@@ -29,7 +29,11 @@ const REPORT_TYPE_MAP = {
   'MAIN_REPORT': 'main',
   'PRODUCTS_REPORT': 'products',
   'CATEGORIES_REPORT': 'categories',
-  'CUSTOMERS_REPORT': 'customers'
+  'CUSTOMERS_REPORT': 'customers',
+  'CUSTOMER_INVOICES_REPORT': 'customer_invoices',
+  'DAILY_SALES_REPORT': 'daily_sales',
+  'HOURLY_SALES_REPORT': 'hourly_sales',
+  'PROFIT_MARGIN_REPORT': 'profit_margin'
 } as const;
 
 type ReportType = keyof typeof REPORT_TYPE_MAP;
@@ -42,7 +46,11 @@ class HybridTableStorage {
     MAIN_REPORT: 'pos-reports-main-table-config',
     PRODUCTS_REPORT: 'pos-reports-products-table-config',
     CATEGORIES_REPORT: 'pos-reports-categories-table-config',
-    CUSTOMERS_REPORT: 'pos-reports-customers-table-config'
+    CUSTOMERS_REPORT: 'pos-reports-customers-table-config',
+    CUSTOMER_INVOICES_REPORT: 'pos-reports-customer-invoices-table-config',
+    DAILY_SALES_REPORT: 'pos-reports-daily-sales-table-config',
+    HOURLY_SALES_REPORT: 'pos-reports-hourly-sales-table-config',
+    PROFIT_MARGIN_REPORT: 'pos-reports-profit-margin-table-config'
   } as const;
 
   private readonly CONFIG_VERSION = '2.1.0';

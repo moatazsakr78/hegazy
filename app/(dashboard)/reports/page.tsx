@@ -601,6 +601,16 @@ function ReportsPageContent() {
   const [usersReportData, setUsersReportData] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // New report states
+  const [showCustomerInvoicesReport, setShowCustomerInvoicesReport] = useState(false);
+  const [customerInvoicesReportData, setCustomerInvoicesReportData] = useState<any[]>([]);
+  const [showDailySalesReport, setShowDailySalesReport] = useState(false);
+  const [dailySalesReportData, setDailySalesReportData] = useState<any[]>([]);
+  const [showHourlySalesReport, setShowHourlySalesReport] = useState(false);
+  const [hourlySalesReportData, setHourlySalesReportData] = useState<any[]>([]);
+  const [showProfitMarginReport, setShowProfitMarginReport] = useState(false);
+  const [profitMarginReportData, setProfitMarginReportData] = useState<any[]>([]);
+
   // Define columns for users report
   const usersTableColumns = useMemo(() => [
     {
@@ -696,6 +706,285 @@ function ReportsPageContent() {
       user.user_name?.toLowerCase().includes(query)
     );
   }, [usersReportData, searchQuery]);
+
+  // Filtered data for new reports
+  const filteredCustomerInvoicesData = useMemo(() => {
+    if (!searchQuery.trim()) return customerInvoicesReportData;
+    const query = searchQuery.toLowerCase().trim();
+    return customerInvoicesReportData.filter(item =>
+      item.customer_name?.toLowerCase().includes(query)
+    );
+  }, [customerInvoicesReportData, searchQuery]);
+
+  const filteredDailySalesData = useMemo(() => {
+    if (!searchQuery.trim()) return dailySalesReportData;
+    return dailySalesReportData;
+  }, [dailySalesReportData, searchQuery]);
+
+  const filteredHourlySalesData = useMemo(() => {
+    if (!searchQuery.trim()) return hourlySalesReportData;
+    return hourlySalesReportData;
+  }, [hourlySalesReportData, searchQuery]);
+
+  const filteredProfitMarginData = useMemo(() => {
+    if (!searchQuery.trim()) return profitMarginReportData;
+    const query = searchQuery.toLowerCase().trim();
+    return profitMarginReportData.filter(item =>
+      item.product_name?.toLowerCase().includes(query)
+    );
+  }, [profitMarginReportData, searchQuery]);
+
+  // Define columns for customer invoices report
+  const customerInvoicesTableColumns = useMemo(() => [
+    {
+      id: 'index',
+      header: '#',
+      accessor: '#',
+      width: 60,
+      visible: true
+    },
+    {
+      id: 'last_transaction_date',
+      header: 'آخر تاريخ تعامل',
+      accessor: 'last_transaction_date',
+      width: 140,
+      visible: true,
+      render: (value: string) => {
+        if (!value) return <span className="text-gray-400">-</span>;
+        const date = new Date(value);
+        return <span className="text-gray-300">{date.toLocaleDateString('ar-EG')}</span>;
+      }
+    },
+    {
+      id: 'avg_transaction_frequency',
+      header: 'متوسط التعامل',
+      accessor: 'avg_transaction_frequency',
+      width: 130,
+      visible: true,
+      render: (value: number) => {
+        if (!value || value === 0) return <span className="text-gray-400">-</span>;
+        if (value === 1) return <span className="text-green-400">يومياً</span>;
+        return <span className="text-blue-400">كل {Math.round(value)} يوم</span>;
+      }
+    },
+    {
+      id: 'customer_name',
+      header: 'اسم العميل',
+      accessor: 'customer_name',
+      width: 180,
+      visible: true,
+      render: (value: string) => <span className="text-white font-medium">{value || 'غير محدد'}</span>
+    },
+    {
+      id: 'invoice_count',
+      header: 'عدد الفواتير',
+      accessor: 'invoice_count',
+      width: 110,
+      visible: true,
+      render: (value: number) => <span className="text-blue-400 font-medium">{value || 0}</span>
+    },
+    {
+      id: 'total_items_quantity',
+      header: 'كمية المنتجات',
+      accessor: 'total_items_quantity',
+      width: 120,
+      visible: true,
+      render: (value: number) => <span className="text-purple-400 font-medium">{value || 0}</span>
+    },
+    {
+      id: 'total_amount',
+      header: 'الإجمالي',
+      accessor: 'total_amount',
+      width: 130,
+      visible: true,
+      render: (value: number) => <span className="text-green-400 font-medium">{formatPrice(value || 0)}</span>
+    },
+    {
+      id: 'balance',
+      header: 'الرصيد',
+      accessor: 'balance',
+      width: 130,
+      visible: true,
+      render: (value: number) => {
+        const balance = value || 0;
+        const colorClass = balance > 0 ? 'text-red-400' : balance < 0 ? 'text-green-400' : 'text-gray-400';
+        return <span className={`${colorClass} font-medium`}>{formatPrice(balance)}</span>;
+      }
+    }
+  ], [formatPrice]);
+
+  // Define columns for daily sales report
+  const dailySalesTableColumns = useMemo(() => [
+    {
+      id: 'index',
+      header: '#',
+      accessor: '#',
+      width: 60,
+      visible: true
+    },
+    {
+      id: 'sale_date',
+      header: 'التاريخ',
+      accessor: 'sale_date',
+      width: 140,
+      visible: true,
+      render: (value: string) => {
+        if (!value) return <span className="text-gray-400">-</span>;
+        const date = new Date(value);
+        return <span className="text-white font-medium">{date.toLocaleDateString('ar-EG')}</span>;
+      }
+    },
+    {
+      id: 'day_name',
+      header: 'اليوم',
+      accessor: 'day_name',
+      width: 100,
+      visible: true,
+      render: (value: string) => <span className="text-blue-400">{value || '-'}</span>
+    },
+    {
+      id: 'invoice_count',
+      header: 'عدد الفواتير',
+      accessor: 'invoice_count',
+      width: 110,
+      visible: true,
+      render: (value: number) => <span className="text-purple-400 font-medium">{value || 0}</span>
+    },
+    {
+      id: 'total_sales',
+      header: 'إجمالي المبيعات',
+      accessor: 'total_sales',
+      width: 150,
+      visible: true,
+      render: (value: number) => <span className="text-green-400 font-medium">{formatPrice(value || 0)}</span>
+    },
+    {
+      id: 'avg_sale',
+      header: 'متوسط الفاتورة',
+      accessor: 'avg_sale',
+      width: 130,
+      visible: true,
+      render: (value: number) => <span className="text-gray-300">{formatPrice(value || 0)}</span>
+    }
+  ], [formatPrice]);
+
+  // Define columns for hourly sales report
+  const hourlySalesTableColumns = useMemo(() => [
+    {
+      id: 'index',
+      header: '#',
+      accessor: '#',
+      width: 60,
+      visible: true
+    },
+    {
+      id: 'hour_range',
+      header: 'الساعة',
+      accessor: 'hour_range',
+      width: 150,
+      visible: true,
+      render: (value: string) => <span className="text-white font-medium">{value || '-'}</span>
+    },
+    {
+      id: 'total_sales',
+      header: 'إجمالي المبيعات',
+      accessor: 'total_sales',
+      width: 150,
+      visible: true,
+      render: (value: number) => <span className="text-green-400 font-medium">{formatPrice(value || 0)}</span>
+    },
+    {
+      id: 'sales_count',
+      header: 'عدد المبيعات',
+      accessor: 'sales_count',
+      width: 120,
+      visible: true,
+      render: (value: number) => <span className="text-blue-400 font-medium">{value || 0}</span>
+    },
+    {
+      id: 'avg_sale',
+      header: 'متوسط المبيعة',
+      accessor: 'avg_sale',
+      width: 130,
+      visible: true,
+      render: (value: number) => <span className="text-gray-300">{formatPrice(value || 0)}</span>
+    },
+    {
+      id: 'percentage',
+      header: 'النسبة %',
+      accessor: 'percentage',
+      width: 100,
+      visible: true,
+      render: (value: number) => <span className="text-yellow-400 font-medium">{(value || 0).toFixed(2)}%</span>
+    }
+  ], [formatPrice]);
+
+  // Define columns for profit margin report
+  const profitMarginTableColumns = useMemo(() => [
+    {
+      id: 'index',
+      header: '#',
+      accessor: '#',
+      width: 60,
+      visible: true
+    },
+    {
+      id: 'product_name',
+      header: 'المنتج',
+      accessor: 'product_name',
+      width: 200,
+      visible: true,
+      render: (value: string) => <span className="text-white font-medium">{value || '-'}</span>
+    },
+    {
+      id: 'quantity',
+      header: 'الكمية',
+      accessor: 'quantity',
+      width: 90,
+      visible: true,
+      render: (value: number) => <span className="text-blue-400 font-medium">{value || 0}</span>
+    },
+    {
+      id: 'cost_price',
+      header: 'التكلفة',
+      accessor: 'cost_price',
+      width: 120,
+      visible: true,
+      render: (value: number) => <span className="text-gray-300">{formatPrice(value || 0)}</span>
+    },
+    {
+      id: 'total_amount',
+      header: 'الإجمالي',
+      accessor: 'total_amount',
+      width: 130,
+      visible: true,
+      render: (value: number) => <span className="text-white font-medium">{formatPrice(value || 0)}</span>
+    },
+    {
+      id: 'profit',
+      header: 'الربح',
+      accessor: 'profit',
+      width: 130,
+      visible: true,
+      render: (value: number) => {
+        const profit = value || 0;
+        const colorClass = profit >= 0 ? 'text-green-400' : 'text-red-400';
+        return <span className={`${colorClass} font-medium`}>{formatPrice(profit)}</span>;
+      }
+    },
+    {
+      id: 'margin',
+      header: 'هامش الربح %',
+      accessor: 'margin',
+      width: 120,
+      visible: true,
+      render: (value: number) => {
+        const margin = value || 0;
+        const colorClass = margin >= 20 ? 'text-green-400' : margin >= 10 ? 'text-yellow-400' : 'text-red-400';
+        return <span className={`${colorClass} font-medium`}>{margin.toFixed(2)}%</span>;
+      }
+    }
+  ], [formatPrice]);
 
   // Clear search when switching tabs
   useEffect(() => {
@@ -1518,6 +1807,467 @@ function ReportsPageContent() {
     }
   };
   
+  // ============ NEW REPORTS FETCH FUNCTIONS ============
+
+  // Fetch Customer Invoices Report
+  const fetchCustomerInvoicesReport = async () => {
+    setLoading(true);
+    try {
+      // Get customers data with account balance
+      const { data: customersData, error: customersError } = await supabase
+        .from('customers')
+        .select('id, name, account_balance')
+        .eq('is_active', true);
+
+      if (customersError) {
+        console.error('Error fetching customers:', customersError);
+        alert(`خطأ في جلب بيانات العملاء: ${customersError.message}`);
+        return;
+      }
+
+      // Get sales data with items
+      let salesQuery = supabase
+        .from('sales')
+        .select(`
+          id,
+          customer_id,
+          total_amount,
+          created_at,
+          sale_items(quantity)
+        `)
+        .not('customer_id', 'is', null);
+
+      // Apply date filters
+      if (dateFilter.type === 'today') {
+        const today = new Date().toISOString().split('T')[0];
+        salesQuery = salesQuery.gte('created_at', today + 'T00:00:00');
+      } else if (dateFilter.type === 'current_week') {
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        salesQuery = salesQuery.gte('created_at', weekStart.toISOString());
+      } else if (dateFilter.type === 'current_month') {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        salesQuery = salesQuery.gte('created_at', monthStart.toISOString());
+      } else if (dateFilter.type === 'custom' && dateFilter.startDate && dateFilter.endDate) {
+        salesQuery = salesQuery
+          .gte('created_at', dateFilter.startDate.toISOString())
+          .lte('created_at', dateFilter.endDate.toISOString());
+      }
+
+      const { data: salesData, error: salesError } = await salesQuery;
+
+      if (salesError) {
+        console.error('Error fetching sales:', salesError);
+        alert(`خطأ في جلب بيانات المبيعات: ${salesError.message}`);
+        return;
+      }
+
+      // Process data
+      const customerMap = new Map();
+
+      customersData?.forEach((customer: any) => {
+        customerMap.set(customer.id, {
+          customer_id: customer.id,
+          customer_name: customer.name,
+          balance: customer.account_balance || 0,
+          invoice_count: 0,
+          total_amount: 0,
+          total_items_quantity: 0,
+          transaction_dates: [] as string[],
+          last_transaction_date: null as string | null,
+          avg_transaction_frequency: 0
+        });
+      });
+
+      salesData?.forEach((sale: any) => {
+        if (!sale.customer_id || !customerMap.has(sale.customer_id)) return;
+
+        const customerStats = customerMap.get(sale.customer_id);
+        customerStats.invoice_count += 1;
+        customerStats.total_amount += parseFloat(sale.total_amount) || 0;
+        customerStats.transaction_dates.push(sale.created_at);
+
+        // Calculate total items quantity
+        if (sale.sale_items) {
+          sale.sale_items.forEach((item: any) => {
+            customerStats.total_items_quantity += item.quantity || 0;
+          });
+        }
+      });
+
+      // Calculate transaction frequency and last date
+      customerMap.forEach((stats: any) => {
+        if (stats.transaction_dates.length > 0) {
+          stats.transaction_dates.sort((a: string, b: string) => new Date(b).getTime() - new Date(a).getTime());
+          stats.last_transaction_date = stats.transaction_dates[0];
+
+          if (stats.transaction_dates.length > 1) {
+            const dates = stats.transaction_dates.map((d: string) => new Date(d).getTime());
+            let totalDays = 0;
+            for (let i = 0; i < dates.length - 1; i++) {
+              totalDays += (dates[i] - dates[i + 1]) / (1000 * 60 * 60 * 24);
+            }
+            stats.avg_transaction_frequency = Math.round(totalDays / (dates.length - 1));
+          }
+        }
+        delete stats.transaction_dates;
+      });
+
+      // Filter only customers with invoices and sort
+      const customersArray = Array.from(customerMap.values())
+        .filter((c: any) => c.invoice_count > 0)
+        .sort((a: any, b: any) => b.total_amount - a.total_amount);
+
+      setCustomerInvoicesReportData(customersArray);
+
+      const total = customersArray.reduce((sum: number, c: any) => sum + c.total_amount, 0);
+      setTotalSalesAmount(total.toFixed(2));
+
+    } catch (error) {
+      console.error('Error fetching customer invoices report:', error);
+      alert('حدث خطأ أثناء جلب تقرير فواتير العملاء');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch Daily Sales Report
+  const fetchDailySalesReport = async () => {
+    setLoading(true);
+    try {
+      const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
+      let salesQuery = supabase
+        .from('sales')
+        .select('id, total_amount, created_at');
+
+      // Apply date filters
+      if (dateFilter.type === 'today') {
+        const today = new Date().toISOString().split('T')[0];
+        salesQuery = salesQuery.gte('created_at', today + 'T00:00:00');
+      } else if (dateFilter.type === 'current_week') {
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        salesQuery = salesQuery.gte('created_at', weekStart.toISOString());
+      } else if (dateFilter.type === 'current_month') {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        salesQuery = salesQuery.gte('created_at', monthStart.toISOString());
+      } else if (dateFilter.type === 'custom' && dateFilter.startDate && dateFilter.endDate) {
+        salesQuery = salesQuery
+          .gte('created_at', dateFilter.startDate.toISOString())
+          .lte('created_at', dateFilter.endDate.toISOString());
+      } else {
+        // Default to last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        salesQuery = salesQuery.gte('created_at', thirtyDaysAgo.toISOString());
+      }
+
+      const { data: salesData, error: salesError } = await salesQuery;
+
+      if (salesError) {
+        console.error('Error fetching sales:', salesError);
+        alert(`خطأ في جلب بيانات المبيعات: ${salesError.message}`);
+        return;
+      }
+
+      // Group by date
+      const dailyMap = new Map();
+
+      salesData?.forEach((sale: any) => {
+        const date = new Date(sale.created_at);
+        const dateKey = date.toISOString().split('T')[0];
+        const dayOfWeek = date.getDay();
+
+        if (!dailyMap.has(dateKey)) {
+          dailyMap.set(dateKey, {
+            sale_date: dateKey,
+            day_name: dayNames[dayOfWeek],
+            invoice_count: 0,
+            total_sales: 0
+          });
+        }
+
+        const dayStats = dailyMap.get(dateKey);
+        dayStats.invoice_count += 1;
+        dayStats.total_sales += parseFloat(sale.total_amount) || 0;
+      });
+
+      // Calculate average and sort by date descending
+      const dailyArray = Array.from(dailyMap.values())
+        .map((day: any) => ({
+          ...day,
+          avg_sale: day.invoice_count > 0 ? day.total_sales / day.invoice_count : 0
+        }))
+        .sort((a: any, b: any) => new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime());
+
+      setDailySalesReportData(dailyArray);
+
+      const total = dailyArray.reduce((sum: number, d: any) => sum + d.total_sales, 0);
+      setTotalSalesAmount(total.toFixed(2));
+
+    } catch (error) {
+      console.error('Error fetching daily sales report:', error);
+      alert('حدث خطأ أثناء جلب تقرير المبيعات اليومية');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch Hourly Sales Report
+  const fetchHourlySalesReport = async () => {
+    setLoading(true);
+    try {
+      let salesQuery = supabase
+        .from('sales')
+        .select('id, total_amount, created_at');
+
+      // Apply date filters
+      if (dateFilter.type === 'today') {
+        const today = new Date().toISOString().split('T')[0];
+        salesQuery = salesQuery.gte('created_at', today + 'T00:00:00');
+      } else if (dateFilter.type === 'current_week') {
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        salesQuery = salesQuery.gte('created_at', weekStart.toISOString());
+      } else if (dateFilter.type === 'current_month') {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        salesQuery = salesQuery.gte('created_at', monthStart.toISOString());
+      } else if (dateFilter.type === 'custom' && dateFilter.startDate && dateFilter.endDate) {
+        salesQuery = salesQuery
+          .gte('created_at', dateFilter.startDate.toISOString())
+          .lte('created_at', dateFilter.endDate.toISOString());
+      } else {
+        // Default to today
+        const today = new Date().toISOString().split('T')[0];
+        salesQuery = salesQuery.gte('created_at', today + 'T00:00:00');
+      }
+
+      const { data: salesData, error: salesError } = await salesQuery;
+
+      if (salesError) {
+        console.error('Error fetching sales:', salesError);
+        alert(`خطأ في جلب بيانات المبيعات: ${salesError.message}`);
+        return;
+      }
+
+      // Group by hour
+      const hourlyMap = new Map();
+      let totalAllSales = 0;
+
+      // Initialize all hours
+      for (let i = 0; i < 24; i++) {
+        const startHour = i;
+        const endHour = i === 23 ? 0 : i + 1;
+        const startPeriod = startHour < 12 ? 'AM' : 'PM';
+        const endPeriod = endHour < 12 || endHour === 0 ? 'AM' : 'PM';
+        const displayStartHour = startHour === 0 ? 12 : startHour > 12 ? startHour - 12 : startHour;
+        const displayEndHour = endHour === 0 ? 12 : endHour > 12 ? endHour - 12 : endHour;
+
+        hourlyMap.set(i, {
+          hour: i,
+          hour_range: `${displayStartHour}:00 ${startPeriod} - ${displayEndHour}:59 ${endPeriod}`,
+          total_sales: 0,
+          sales_count: 0
+        });
+      }
+
+      salesData?.forEach((sale: any) => {
+        const date = new Date(sale.created_at);
+        const hour = date.getHours();
+        const amount = parseFloat(sale.total_amount) || 0;
+
+        const hourStats = hourlyMap.get(hour);
+        hourStats.sales_count += 1;
+        hourStats.total_sales += amount;
+        totalAllSales += amount;
+      });
+
+      // Calculate percentages and averages
+      const hourlyArray = Array.from(hourlyMap.values())
+        .map((h: any) => ({
+          ...h,
+          avg_sale: h.sales_count > 0 ? h.total_sales / h.sales_count : 0,
+          percentage: totalAllSales > 0 ? (h.total_sales / totalAllSales) * 100 : 0
+        }))
+        .filter((h: any) => h.sales_count > 0) // Only show hours with sales
+        .sort((a: any, b: any) => b.total_sales - a.total_sales);
+
+      setHourlySalesReportData(hourlyArray);
+      setTotalSalesAmount(totalAllSales.toFixed(2));
+
+    } catch (error) {
+      console.error('Error fetching hourly sales report:', error);
+      alert('حدث خطأ أثناء جلب تقرير المبيعات بالساعة');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch Profit Margin Report
+  const fetchProfitMarginReport = async () => {
+    setLoading(true);
+    try {
+      let saleItemsQuery = supabase
+        .from('sale_items')
+        .select(`
+          id,
+          product_id,
+          quantity,
+          unit_price,
+          cost_price,
+          products(name),
+          sales!inner(created_at)
+        `);
+
+      // Apply date filters
+      if (dateFilter.type === 'today') {
+        const today = new Date().toISOString().split('T')[0];
+        saleItemsQuery = saleItemsQuery.gte('sales.created_at', today + 'T00:00:00');
+      } else if (dateFilter.type === 'current_week') {
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        saleItemsQuery = saleItemsQuery.gte('sales.created_at', weekStart.toISOString());
+      } else if (dateFilter.type === 'current_month') {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        saleItemsQuery = saleItemsQuery.gte('sales.created_at', monthStart.toISOString());
+      } else if (dateFilter.type === 'custom' && dateFilter.startDate && dateFilter.endDate) {
+        saleItemsQuery = saleItemsQuery
+          .gte('sales.created_at', dateFilter.startDate.toISOString())
+          .lte('sales.created_at', dateFilter.endDate.toISOString());
+      }
+
+      const { data: saleItemsData, error: saleItemsError } = await saleItemsQuery;
+
+      if (saleItemsError) {
+        console.error('Error fetching sale items:', saleItemsError);
+        alert(`خطأ في جلب بيانات المبيعات: ${saleItemsError.message}`);
+        return;
+      }
+
+      // Group by product
+      const productMap = new Map();
+
+      saleItemsData?.forEach((item: any) => {
+        const productId = item.product_id;
+        const productName = item.products?.name || 'منتج غير معروف';
+
+        if (!productMap.has(productId)) {
+          productMap.set(productId, {
+            product_id: productId,
+            product_name: productName,
+            quantity: 0,
+            cost_price: 0,
+            total_amount: 0,
+            profit: 0,
+            margin: 0
+          });
+        }
+
+        const productStats = productMap.get(productId);
+        const quantity = item.quantity || 0;
+        const unitPrice = parseFloat(item.unit_price) || 0;
+        const costPrice = parseFloat(item.cost_price) || 0;
+
+        productStats.quantity += quantity;
+        productStats.cost_price += costPrice * quantity;
+        productStats.total_amount += unitPrice * quantity;
+      });
+
+      // Calculate profit and margin
+      const productsArray = Array.from(productMap.values())
+        .map((p: any) => {
+          const profit = p.total_amount - p.cost_price;
+          const margin = p.total_amount > 0 ? (profit / p.total_amount) * 100 : 0;
+          return {
+            ...p,
+            profit,
+            margin
+          };
+        })
+        .sort((a: any, b: any) => b.profit - a.profit);
+
+      setProfitMarginReportData(productsArray);
+
+      const totalSales = productsArray.reduce((sum: number, p: any) => sum + p.total_amount, 0);
+      const totalProfit = productsArray.reduce((sum: number, p: any) => sum + p.profit, 0);
+      setTotalSalesAmount(`${totalSales.toFixed(2)} (ربح: ${totalProfit.toFixed(2)})`);
+
+    } catch (error) {
+      console.error('Error fetching profit margin report:', error);
+      alert('حدث خطأ أثناء جلب تقرير هامش الربح');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open report functions for new reports
+  const openCustomerInvoicesReport = () => {
+    const tabExists = openTabs.some(tab => tab.id === 'customer_invoices');
+    if (!tabExists) {
+      setOpenTabs(prev => [
+        ...prev.map(tab => ({ ...tab, active: false })),
+        { id: 'customer_invoices', title: 'فواتير العملاء', active: true }
+      ]);
+      setActiveTab('customer_invoices');
+      setShowCustomerInvoicesReport(true);
+      fetchCustomerInvoicesReport();
+    } else {
+      switchTab('customer_invoices');
+    }
+  };
+
+  const openDailySalesReport = () => {
+    const tabExists = openTabs.some(tab => tab.id === 'daily_sales');
+    if (!tabExists) {
+      setOpenTabs(prev => [
+        ...prev.map(tab => ({ ...tab, active: false })),
+        { id: 'daily_sales', title: 'المبيعات اليومية', active: true }
+      ]);
+      setActiveTab('daily_sales');
+      setShowDailySalesReport(true);
+      fetchDailySalesReport();
+    } else {
+      switchTab('daily_sales');
+    }
+  };
+
+  const openHourlySalesReport = () => {
+    const tabExists = openTabs.some(tab => tab.id === 'hourly_sales');
+    if (!tabExists) {
+      setOpenTabs(prev => [
+        ...prev.map(tab => ({ ...tab, active: false })),
+        { id: 'hourly_sales', title: 'المبيعات بالساعة', active: true }
+      ]);
+      setActiveTab('hourly_sales');
+      setShowHourlySalesReport(true);
+      fetchHourlySalesReport();
+    } else {
+      switchTab('hourly_sales');
+    }
+  };
+
+  const openProfitMarginReport = () => {
+    const tabExists = openTabs.some(tab => tab.id === 'profit_margin');
+    if (!tabExists) {
+      setOpenTabs(prev => [
+        ...prev.map(tab => ({ ...tab, active: false })),
+        { id: 'profit_margin', title: 'هامش الربح', active: true }
+      ]);
+      setActiveTab('profit_margin');
+      setShowProfitMarginReport(true);
+      fetchProfitMarginReport();
+    } else {
+      switchTab('profit_margin');
+    }
+  };
+
+  // ============ END NEW REPORTS FETCH FUNCTIONS ============
+
   const handleProductsReportClick = () => {
     addTab('products', 'الأصناف');
     setShowProductsReport(true);
@@ -2057,6 +2807,8 @@ function ReportsPageContent() {
                               activeTab === 'categories' ? 'بحث باسم التصنيف...' :
                               activeTab === 'customers' ? 'بحث باسم العميل...' :
                               activeTab === 'users' ? 'بحث باسم المستخدم...' :
+                              activeTab === 'customer_invoices' ? 'بحث باسم العميل...' :
+                              activeTab === 'profit_margin' ? 'بحث باسم المنتج...' :
                               'بحث...'
                             }
                             className="w-56 bg-[#2B3544] border border-gray-600 rounded-md py-1.5 px-3 pr-8 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -2232,6 +2984,94 @@ function ReportsPageContent() {
                         </>
                       )}
                     </>
+                  ) : activeTab === 'customer_invoices' ? (
+                    <>
+                      {loading && (
+                        <div className="flex items-center justify-center h-32">
+                          <div className="text-white">جاري تحميل البيانات...</div>
+                        </div>
+                      )}
+                      {!loading && (
+                        <>
+                          <ResizableTable
+                            className="h-full w-full"
+                            columns={customerInvoicesTableColumns}
+                            data={filteredCustomerInvoicesData}
+                            selectedRowId={null}
+                            reportType="CUSTOMER_INVOICES_REPORT"
+                            showToast={showToast}
+                            onRowClick={(item, index) => {}}
+                            onRowDoubleClick={(item, index) => {}}
+                          />
+                        </>
+                      )}
+                    </>
+                  ) : activeTab === 'daily_sales' ? (
+                    <>
+                      {loading && (
+                        <div className="flex items-center justify-center h-32">
+                          <div className="text-white">جاري تحميل البيانات...</div>
+                        </div>
+                      )}
+                      {!loading && (
+                        <>
+                          <ResizableTable
+                            className="h-full w-full"
+                            columns={dailySalesTableColumns}
+                            data={filteredDailySalesData}
+                            selectedRowId={null}
+                            reportType="DAILY_SALES_REPORT"
+                            showToast={showToast}
+                            onRowClick={(item, index) => {}}
+                            onRowDoubleClick={(item, index) => {}}
+                          />
+                        </>
+                      )}
+                    </>
+                  ) : activeTab === 'hourly_sales' ? (
+                    <>
+                      {loading && (
+                        <div className="flex items-center justify-center h-32">
+                          <div className="text-white">جاري تحميل البيانات...</div>
+                        </div>
+                      )}
+                      {!loading && (
+                        <>
+                          <ResizableTable
+                            className="h-full w-full"
+                            columns={hourlySalesTableColumns}
+                            data={filteredHourlySalesData}
+                            selectedRowId={null}
+                            reportType="HOURLY_SALES_REPORT"
+                            showToast={showToast}
+                            onRowClick={(item, index) => {}}
+                            onRowDoubleClick={(item, index) => {}}
+                          />
+                        </>
+                      )}
+                    </>
+                  ) : activeTab === 'profit_margin' ? (
+                    <>
+                      {loading && (
+                        <div className="flex items-center justify-center h-32">
+                          <div className="text-white">جاري تحميل البيانات...</div>
+                        </div>
+                      )}
+                      {!loading && (
+                        <>
+                          <ResizableTable
+                            className="h-full w-full"
+                            columns={profitMarginTableColumns}
+                            data={filteredProfitMarginData}
+                            selectedRowId={null}
+                            reportType="PROFIT_MARGIN_REPORT"
+                            showToast={showToast}
+                            onRowClick={(item, index) => {}}
+                            onRowDoubleClick={(item, index) => {}}
+                          />
+                        </>
+                      )}
+                    </>
                   ) : activeTab === 'main' ? (
                     /* Reports List Container */
                     <div className="h-full overflow-y-auto scrollbar-hide p-4">
@@ -2253,7 +3093,7 @@ function ReportsPageContent() {
                               'أنواع الدفع من قبل العملاء',
                               'فواتير العملاء',
                               'المبيعات اليومية',
-                              'Hourly sales',
+                              'المبيعات بالساعة',
                               'Hourly sales by product groups',
                               'Table or order number',
                               'هامش الربح',
@@ -2275,6 +3115,14 @@ function ReportsPageContent() {
                                     openCustomersReport();
                                   } else if (report === 'المستخدمين') {
                                     openUsersReport();
+                                  } else if (report === 'فواتير العملاء') {
+                                    openCustomerInvoicesReport();
+                                  } else if (report === 'المبيعات اليومية') {
+                                    openDailySalesReport();
+                                  } else if (report === 'المبيعات بالساعة') {
+                                    openHourlySalesReport();
+                                  } else if (report === 'هامش الربح') {
+                                    openProfitMarginReport();
                                   }
                                 }}
                                 className="group w-full bg-[#374151] hover:bg-[#3B4754] text-right text-white transition-all duration-200 flex items-center justify-between text-sm p-2"

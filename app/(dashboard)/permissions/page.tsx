@@ -771,11 +771,22 @@ export default function PermissionsPage() {
   ];
 
   const getCurrentData = () => {
+    const searchLower = searchTerm.toLowerCase().trim();
+
     switch (activeView) {
       case 'roles':
-        return roles;
+        if (!searchLower) return roles;
+        return roles.filter(role =>
+          role.name.toLowerCase().includes(searchLower) ||
+          role.description.toLowerCase().includes(searchLower)
+        );
       case 'users':
-        return realUsers;
+        if (!searchLower) return realUsers;
+        return realUsers.filter(user =>
+          user.name?.toLowerCase().includes(searchLower) ||
+          user.email?.toLowerCase().includes(searchLower) ||
+          user.role?.toLowerCase().includes(searchLower)
+        );
       case 'permissions':
         return [];
       default:
