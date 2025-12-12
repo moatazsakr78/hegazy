@@ -3000,7 +3000,7 @@ function POSPageContent() {
 
               {/* Right Side - Change Calculator */}
               {!isTransferMode && !isPurchaseMode && (
-                <div className="flex flex-col items-end">
+                <div className="flex flex-col items-end self-start">
                   <input
                     type="number"
                     value={paidAmount}
