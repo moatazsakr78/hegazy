@@ -2395,6 +2395,832 @@ function POSPageContent() {
     }
   };
 
+  // Print Preview Receipt - for printing current cart before confirmation (as review/draft)
+  const printPreviewReceipt = () => {
+    if (cartItems.length === 0) {
+      alert("السلة فارغة - لا يوجد منتجات للطباعة");
+      return;
+    }
+
+    // Calculate total with any discounts applied
+    const totalAmount = calculateTotalWithDiscounts();
+
+    // Get paid amount from payment split if available
+    const paidFromSplit = paymentSplitData.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const actualPaid = paidFromSplit > 0 ? paidFromSplit : (parseFloat(paidAmount) || totalAmount);
+    const remainingCredit = Math.max(0, totalAmount - actualPaid);
+
+    // Create preview receipt content (similar to invoice but marked as "مراجعة")
+    const previewReceiptContent = `
+      <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title>مراجعة الطلب</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+
+            body {
+              font-family: 'Arial', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              font-size: 13px;
+              line-height: 1.3;
+              color: #000;
+              background: white;
+              width: 100%;
+              margin: 0;
+              padding: 0;
+            }
+
+            .preview-banner {
+              background: #ff9800;
+              color: white;
+              text-align: center;
+              padding: 8px;
+              font-size: 16px;
+              font-weight: bold;
+              margin-bottom: 5px;
+              border: 2px dashed #e65100;
+            }
+
+            .receipt-header {
+              text-align: center;
+              margin-bottom: 3px;
+              padding: 0 2px;
+            }
+
+            .company-logo {
+              width: 60px;
+              height: auto;
+              margin: 0 auto 4px auto;
+              display: block;
+              max-height: 60px;
+              object-fit: contain;
+            }
+
+            .company-logo-fallback {
+              display: none;
+            }
+
+            .company-name {
+              font-size: 18px;
+              font-weight: 700;
+              margin-bottom: 2px;
+              color: #000;
+            }
+
+            .receipt-date {
+              font-size: 11px;
+              margin-bottom: 1px;
+            }
+
+            .receipt-address {
+              font-size: 10px;
+              margin-bottom: 1px;
+            }
+
+            .receipt-phone {
+              font-size: 10px;
+            }
+
+            .customer-info {
+              margin: 10px 20px;
+              padding: 8px;
+              border: 1px dashed #333;
+              background-color: #f9f9f9;
+            }
+
+            .customer-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 2px 0;
+              font-size: 11px;
+            }
+
+            .customer-label {
+              font-weight: 600;
+              color: #333;
+            }
+
+            .customer-value {
+              color: #000;
+            }
+
+            .items-table {
+              width: calc(100% - 40px);
+              border-collapse: collapse;
+              margin: 3px 20px;
+              border: 1px solid #000;
+              table-layout: fixed;
+            }
+
+            .items-table th,
+            .items-table td {
+              border: 1px solid #000;
+              padding: 7px;
+              text-align: center;
+              font-size: 14px;
+              font-weight: 400;
+            }
+
+            .items-table th {
+              background-color: #f5f5f5;
+              font-weight: 600;
+              font-size: 14px;
+            }
+
+            .items-table th:nth-child(1),
+            .items-table td:nth-child(1) {
+              width: 45%;
+            }
+
+            .items-table th:nth-child(2),
+            .items-table td:nth-child(2) {
+              width: 12%;
+            }
+
+            .items-table th:nth-child(3),
+            .items-table td:nth-child(3) {
+              width: 18%;
+            }
+
+            .items-table th:nth-child(4),
+            .items-table td:nth-child(4) {
+              width: 25%;
+              text-align: right !important;
+              padding-right: 4px !important;
+            }
+
+            .item-name {
+              text-align: right !important;
+              padding-right: 12px !important;
+              padding-left: 2px !important;
+              font-size: 15px;
+              font-weight: bold;
+              word-wrap: break-word;
+              white-space: normal;
+              overflow-wrap: break-word;
+            }
+
+            .total-row {
+              border-top: 2px solid #000;
+              font-weight: 700;
+              font-size: 12px;
+            }
+
+            .payment-section {
+              margin-top: 8px;
+              text-align: center;
+              font-size: 11px;
+              padding: 0 2px;
+            }
+
+            .payment-table {
+              width: calc(100% - 40px);
+              border-collapse: collapse;
+              margin: 5px 20px;
+              border: 1px solid #000;
+            }
+
+            .payment-table th,
+            .payment-table td {
+              border: 1px solid #000;
+              padding: 4px;
+              text-align: center;
+              font-size: 11px;
+            }
+
+            .footer {
+              text-align: center;
+              margin-top: 8px;
+              font-size: 9px;
+              border-top: 1px solid #000;
+              padding: 3px 2px 0 2px;
+            }
+
+            .preview-footer-note {
+              background: #fff3cd;
+              border: 1px dashed #ffc107;
+              padding: 5px;
+              margin: 8px 20px;
+              text-align: center;
+              font-size: 10px;
+              color: #856404;
+            }
+
+            @media print {
+              @page {
+                size: 80mm auto;
+                margin: 0;
+              }
+
+              body {
+                width: 80mm !important;
+                max-width: 80mm !important;
+                margin: 0 !important;
+                padding: 0 1.5mm !important;
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+
+              .preview-banner {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+
+              .company-logo {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+
+              .no-print {
+                display: none;
+              }
+
+              .items-table {
+                margin: 3px 0;
+                width: 100% !important;
+              }
+
+              .items-table th,
+              .items-table td {
+                padding: 2px;
+              }
+
+              * {
+                max-width: none !important;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="preview-banner">
+            ⚠️ مراجعة الطلب - ليست فاتورة نهائية ⚠️
+          </div>
+
+          <div class="receipt-header">
+            <img
+              src="${logoUrl || (window.location.origin + '/assets/logo/El Farouk Group2.png')}"
+              alt="${companyName}"
+              class="company-logo"
+              onerror="this.style.display='none'; document.querySelector('.company-logo-fallback').style.display='block';"
+            />
+            <div class="company-logo-fallback" style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 4px;">🏢</div>
+            <div class="company-name">${companyName}</div>
+            <div class="receipt-date">${new Date().toLocaleDateString("ar-EG")} - ${new Date().toLocaleDateString("en-US")}</div>
+            <div class="receipt-address">${selections.branch?.name || "الفرع الرئيسي"}</div>
+            <div class="receipt-phone">${selections.branch?.phone || "01102862856"}</div>
+          </div>
+
+          ${
+            // Show customer info if customer is selected and not default
+            selections.customer &&
+            selections.customer.id !== '00000000-0000-0000-0000-000000000001' &&
+            (selections.customer.name || selections.customer.phone || selections.customer.address || selections.customer.city)
+              ? `
+          <div class="customer-info">
+            ${selections.customer.name ? `<div class="customer-row"><span class="customer-label">العميل:</span> <span class="customer-value">${selections.customer.name}</span></div>` : ''}
+            ${selections.customer.phone ? `<div class="customer-row"><span class="customer-label">الهاتف:</span> <span class="customer-value">${selections.customer.phone}</span></div>` : ''}
+            ${selections.customer.address ? `<div class="customer-row"><span class="customer-label">العنوان:</span> <span class="customer-value">${selections.customer.address}</span></div>` : ''}
+            ${selections.customer.city ? `<div class="customer-row"><span class="customer-label">المدينة:</span> <span class="customer-value">${selections.customer.city}</span></div>` : ''}
+          </div>
+              `
+              : ''
+          }
+
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th class="item-name">الصنف</th>
+                <th>كمية</th>
+                <th>سعر</th>
+                <th>قيمة</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${cartItems
+                .map(
+                  (item: any) => `
+                <tr>
+                  <td class="item-name">${item.product.name}</td>
+                  <td>${item.quantity}</td>
+                  <td>${(item.price || 0).toFixed(0)}</td>
+                  <td>${((item.price || 0) * item.quantity).toFixed(0)}</td>
+                </tr>
+              `,
+                )
+                .join("")}
+              <tr class="total-row">
+                <td class="item-name">-</td>
+                <td>${cartItems.length}</td>
+                <td>= اجمالي =</td>
+                <td>${totalAmount.toFixed(0)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          ${
+            // Show payment section for non-default customers
+            selections.customer &&
+            selections.customer.id !== '00000000-0000-0000-0000-000000000001'
+              ? `
+          <div class="payment-section">
+            ${numberToArabicWords(totalAmount)} جنيهاً
+
+            <table class="payment-table">
+              <tr>
+                <th>مدفوع</th>
+                <th>متبقي</th>
+                <th>رصيد العميل الحالي</th>
+              </tr>
+              <tr>
+                <td>${actualPaid.toFixed(0)}</td>
+                <td>${remainingCredit.toFixed(0)}</td>
+                <td>${(selections.customer?.credit_balance || selections.customer?.calculatedBalance || 0).toFixed(0)}</td>
+              </tr>
+            </table>
+          </div>
+              `
+              : `
+          <div class="payment-section">
+            ${numberToArabicWords(totalAmount)} جنيهاً
+          </div>
+              `
+          }
+
+          <div class="preview-footer-note">
+            📋 هذه مراجعة للطلب وليست فاتورة رسمية - يرجى التأكيد للحصول على الفاتورة النهائية
+          </div>
+
+          <div class="footer">
+            ${new Date().toLocaleDateString("en-GB")} ${new Date().toLocaleTimeString("en-GB", { hour12: false })} by: ${selections.record?.name || "kassem"}
+          </div>
+
+          <div class="no-print" style="text-align: center; margin-top: 20px;">
+            <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; background: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer;">طباعة المراجعة</button>
+            <button onclick="window.close()" style="padding: 10px 20px; font-size: 16px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">إغلاق</button>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Open new window with preview receipt content
+    const printWindow = window.open(
+      "",
+      "_blank",
+      "width=450,height=700,scrollbars=yes,resizable=yes",
+    );
+    if (printWindow) {
+      printWindow.document.write(previewReceiptContent);
+      printWindow.document.close();
+      printWindow.focus();
+
+      // Auto-print after a short delay
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    } else {
+      alert("يرجى السماح بالنوافذ المنبثقة لطباعة المراجعة");
+    }
+  };
+
+  // Open PDF Preview - for viewing/sharing current cart as PDF (without printing)
+  const openPDFPreview = () => {
+    if (cartItems.length === 0) {
+      alert("السلة فارغة - لا يوجد منتجات للمعاينة");
+      return;
+    }
+
+    // Calculate total with any discounts applied
+    const totalAmount = calculateTotalWithDiscounts();
+
+    // Get paid amount from payment split if available
+    const paidFromSplit = paymentSplitData.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const actualPaid = paidFromSplit > 0 ? paidFromSplit : (parseFloat(paidAmount) || totalAmount);
+    const remainingCredit = Math.max(0, totalAmount - actualPaid);
+
+    // Create PDF-style preview content
+    const pdfPreviewContent = `
+      <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title>معاينة الطلب - ${selections.customer?.name || 'عميل'}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+
+            body {
+              font-family: 'Cairo', 'Arial', sans-serif;
+              font-size: 14px;
+              line-height: 1.5;
+              color: #000;
+              background: #f5f5f5;
+              padding: 20px;
+            }
+
+            .pdf-container {
+              max-width: 400px;
+              margin: 0 auto;
+              background: white;
+              padding: 20px;
+              border-radius: 10px;
+              box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            }
+
+            .preview-banner {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              text-align: center;
+              padding: 12px;
+              font-size: 16px;
+              font-weight: bold;
+              margin-bottom: 15px;
+              border-radius: 8px;
+            }
+
+            .receipt-header {
+              text-align: center;
+              margin-bottom: 15px;
+              padding-bottom: 15px;
+              border-bottom: 2px dashed #ddd;
+            }
+
+            .company-logo {
+              width: 80px;
+              height: auto;
+              margin: 0 auto 10px auto;
+              display: block;
+              max-height: 80px;
+              object-fit: contain;
+            }
+
+            .company-name {
+              font-size: 22px;
+              font-weight: 700;
+              margin-bottom: 5px;
+              color: #333;
+            }
+
+            .receipt-date {
+              font-size: 12px;
+              color: #666;
+              margin-bottom: 3px;
+            }
+
+            .receipt-address,
+            .receipt-phone {
+              font-size: 11px;
+              color: #888;
+            }
+
+            .customer-info {
+              margin: 15px 0;
+              padding: 12px;
+              border: 1px solid #e0e0e0;
+              background-color: #fafafa;
+              border-radius: 8px;
+            }
+
+            .customer-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 4px 0;
+              font-size: 13px;
+            }
+
+            .customer-label {
+              font-weight: 600;
+              color: #555;
+            }
+
+            .customer-value {
+              color: #000;
+            }
+
+            .items-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 15px 0;
+            }
+
+            .items-table th,
+            .items-table td {
+              border: 1px solid #ddd;
+              padding: 10px 8px;
+              text-align: center;
+              font-size: 13px;
+            }
+
+            .items-table th {
+              background-color: #f8f9fa;
+              font-weight: 600;
+              color: #333;
+            }
+
+            .items-table td:first-child {
+              text-align: right;
+              font-weight: 500;
+            }
+
+            .total-row {
+              background-color: #e8f5e9;
+              font-weight: 700;
+            }
+
+            .payment-section {
+              margin-top: 15px;
+              padding: 15px;
+              background: #f0f7ff;
+              border-radius: 8px;
+              text-align: center;
+            }
+
+            .payment-total-text {
+              font-size: 14px;
+              color: #1976d2;
+              margin-bottom: 10px;
+            }
+
+            .payment-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 10px;
+            }
+
+            .payment-table th,
+            .payment-table td {
+              border: 1px solid #bbdefb;
+              padding: 8px;
+              text-align: center;
+              font-size: 12px;
+            }
+
+            .payment-table th {
+              background: #e3f2fd;
+              color: #1565c0;
+            }
+
+            .footer {
+              text-align: center;
+              margin-top: 15px;
+              font-size: 10px;
+              color: #999;
+              padding-top: 10px;
+              border-top: 1px dashed #ddd;
+            }
+
+            .preview-note {
+              background: #fff8e1;
+              border: 1px solid #ffecb3;
+              padding: 10px;
+              margin: 15px 0;
+              text-align: center;
+              font-size: 12px;
+              color: #f57c00;
+              border-radius: 8px;
+            }
+
+            .action-buttons {
+              display: flex;
+              gap: 10px;
+              justify-content: center;
+              margin-top: 20px;
+              padding-top: 15px;
+              border-top: 1px solid #eee;
+            }
+
+            .btn {
+              padding: 12px 24px;
+              font-size: 14px;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              font-weight: 600;
+              transition: all 0.3s ease;
+            }
+
+            .btn-primary {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+            }
+
+            .btn-primary:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+
+            .btn-secondary {
+              background: #6c757d;
+              color: white;
+            }
+
+            .btn-secondary:hover {
+              background: #5a6268;
+            }
+
+            .btn-success {
+              background: #28a745;
+              color: white;
+            }
+
+            .btn-success:hover {
+              background: #218838;
+            }
+
+            @media print {
+              body {
+                background: white;
+                padding: 0;
+              }
+
+              .pdf-container {
+                box-shadow: none;
+                max-width: none;
+              }
+
+              .action-buttons {
+                display: none;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="pdf-container">
+            <div class="preview-banner">
+              📋 معاينة الطلب
+            </div>
+
+            <div class="receipt-header">
+              <img
+                src="${logoUrl || (window.location.origin + '/assets/logo/El Farouk Group2.png')}"
+                alt="${companyName}"
+                class="company-logo"
+                onerror="this.style.display='none';"
+              />
+              <div class="company-name">${companyName}</div>
+              <div class="receipt-date">${new Date().toLocaleDateString("ar-EG")} - ${new Date().toLocaleTimeString("ar-EG")}</div>
+              <div class="receipt-address">${selections.branch?.name || "الفرع الرئيسي"}</div>
+              <div class="receipt-phone">${selections.branch?.phone || "01102862856"}</div>
+            </div>
+
+            ${
+              selections.customer &&
+              selections.customer.id !== '00000000-0000-0000-0000-000000000001' &&
+              (selections.customer.name || selections.customer.phone || selections.customer.address || selections.customer.city)
+                ? `
+            <div class="customer-info">
+              ${selections.customer.name ? `<div class="customer-row"><span class="customer-label">العميل:</span> <span class="customer-value">${selections.customer.name}</span></div>` : ''}
+              ${selections.customer.phone ? `<div class="customer-row"><span class="customer-label">الهاتف:</span> <span class="customer-value">${selections.customer.phone}</span></div>` : ''}
+              ${selections.customer.address ? `<div class="customer-row"><span class="customer-label">العنوان:</span> <span class="customer-value">${selections.customer.address}</span></div>` : ''}
+              ${selections.customer.city ? `<div class="customer-row"><span class="customer-label">المدينة:</span> <span class="customer-value">${selections.customer.city}</span></div>` : ''}
+            </div>
+                `
+                : ''
+            }
+
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>الصنف</th>
+                  <th>الكمية</th>
+                  <th>السعر</th>
+                  <th>الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${cartItems
+                  .map(
+                    (item: any) => `
+                  <tr>
+                    <td>${item.product.name}</td>
+                    <td>${item.quantity}</td>
+                    <td>${(item.price || 0).toFixed(2)} ج.م</td>
+                    <td>${((item.price || 0) * item.quantity).toFixed(2)} ج.م</td>
+                  </tr>
+                `,
+                  )
+                  .join("")}
+                <tr class="total-row">
+                  <td>الإجمالي</td>
+                  <td>${cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0)}</td>
+                  <td>-</td>
+                  <td>${totalAmount.toFixed(2)} ج.م</td>
+                </tr>
+              </tbody>
+            </table>
+
+            ${
+              selections.customer &&
+              selections.customer.id !== '00000000-0000-0000-0000-000000000001'
+                ? `
+            <div class="payment-section">
+              <div class="payment-total-text">
+                ${numberToArabicWords(totalAmount)} جنيهاً مصرياً
+              </div>
+
+              <table class="payment-table">
+                <tr>
+                  <th>المبلغ المدفوع</th>
+                  <th>المتبقي</th>
+                  <th>رصيد العميل</th>
+                </tr>
+                <tr>
+                  <td>${actualPaid.toFixed(2)} ج.م</td>
+                  <td>${remainingCredit.toFixed(2)} ج.م</td>
+                  <td>${(selections.customer?.credit_balance || selections.customer?.calculatedBalance || 0).toFixed(2)} ج.م</td>
+                </tr>
+              </table>
+            </div>
+                `
+                : `
+            <div class="payment-section">
+              <div class="payment-total-text">
+                ${numberToArabicWords(totalAmount)} جنيهاً مصرياً
+              </div>
+            </div>
+                `
+            }
+
+            <div class="preview-note">
+              ⚠️ هذه معاينة للطلب وليست فاتورة نهائية - يمكنك إرسالها للعميل للمراجعة
+            </div>
+
+            <div class="footer">
+              تم إنشاء المعاينة: ${new Date().toLocaleDateString("en-GB")} ${new Date().toLocaleTimeString("en-GB", { hour12: false })} | ${selections.record?.name || "kassem"}
+            </div>
+
+            <div class="action-buttons">
+              <button onclick="window.print()" class="btn btn-primary">🖨️ طباعة</button>
+              <button onclick="copyToClipboard()" class="btn btn-success">📋 نسخ النص</button>
+              <button onclick="window.close()" class="btn btn-secondary">✕ إغلاق</button>
+            </div>
+          </div>
+
+          <script>
+            function copyToClipboard() {
+              const items = ${JSON.stringify(cartItems.map((item: any) => ({
+                name: item.product.name,
+                quantity: item.quantity,
+                price: item.price || 0,
+                total: (item.price || 0) * item.quantity
+              })))};
+
+              let text = "📋 *معاينة الطلب*\\n";
+              text += "━━━━━━━━━━━━━━━━━━\\n";
+              text += "🏪 ${companyName}\\n";
+              text += "📅 ${new Date().toLocaleDateString("ar-EG")}\\n";
+              ${selections.customer?.name ? `text += "👤 العميل: ${selections.customer.name}\\n";` : ''}
+              text += "━━━━━━━━━━━━━━━━━━\\n\\n";
+
+              items.forEach((item, index) => {
+                text += (index + 1) + ". " + item.name + "\\n";
+                text += "   الكمية: " + item.quantity + " | السعر: " + item.price.toFixed(2) + " ج.م\\n";
+                text += "   الإجمالي: " + item.total.toFixed(2) + " ج.م\\n\\n";
+              });
+
+              text += "━━━━━━━━━━━━━━━━━━\\n";
+              text += "💰 *الإجمالي الكلي: ${totalAmount.toFixed(2)} ج.م*\\n";
+              text += "━━━━━━━━━━━━━━━━━━\\n\\n";
+              text += "⚠️ هذه معاينة وليست فاتورة نهائية";
+
+              navigator.clipboard.writeText(text).then(() => {
+                alert("تم نسخ تفاصيل الطلب! يمكنك لصقها في WhatsApp أو أي تطبيق آخر");
+              }).catch(() => {
+                alert("فشل النسخ، يرجى المحاولة مرة أخرى");
+              });
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    // Open new window with PDF preview content
+    const previewWindow = window.open(
+      "",
+      "_blank",
+      "width=500,height=800,scrollbars=yes,resizable=yes",
+    );
+    if (previewWindow) {
+      previewWindow.document.write(pdfPreviewContent);
+      previewWindow.document.close();
+      previewWindow.focus();
+    } else {
+      alert("يرجى السماح بالنوافذ المنبثقة لمعاينة الفاتورة");
+    }
+  };
+
   // Render Tablet View if tablet device detected
   if (isTabletDevice) {
     return (
@@ -2921,11 +3747,31 @@ function POSPageContent() {
                 </button>
 
                 <button
-                  onClick={() => setShowPrintReceiptModal(true)}
-                  className="flex flex-col items-center p-2 text-gray-300 hover:text-white cursor-pointer min-w-[80px]"
+                  onClick={printPreviewReceipt}
+                  disabled={cartItems.length === 0}
+                  className={`flex flex-col items-center p-2 cursor-pointer min-w-[80px] transition-all ${
+                    cartItems.length === 0
+                      ? "text-gray-500 cursor-not-allowed"
+                      : "text-gray-300 hover:text-white"
+                  }`}
+                  title="طباعة مراجعة للطلب الحالي"
                 >
                   <PrinterIcon className="h-5 w-5 mb-1" />
                   <span className="text-sm">طباعة ريسيت</span>
+                </button>
+
+                <button
+                  onClick={openPDFPreview}
+                  disabled={cartItems.length === 0}
+                  className={`flex flex-col items-center p-2 cursor-pointer min-w-[80px] transition-all ${
+                    cartItems.length === 0
+                      ? "text-gray-500 cursor-not-allowed"
+                      : "text-blue-400 hover:text-blue-300"
+                  }`}
+                  title="معاينة الفاتورة للإرسال للعميل"
+                >
+                  <EyeIcon className="h-5 w-5 mb-1" />
+                  <span className="text-sm">معاينة</span>
                 </button>
               </div>
 
@@ -3136,11 +3982,31 @@ function POSPageContent() {
               )}
 
               <button
-                onClick={() => setShowPrintReceiptModal(true)}
-                className="flex items-center gap-2 px-3 py-2 bg-[#2B3544] border border-gray-600 rounded text-gray-300 hover:text-white hover:bg-[#374151] cursor-pointer whitespace-nowrap flex-shrink-0 transition-colors"
+                onClick={printPreviewReceipt}
+                disabled={cartItems.length === 0}
+                className={`flex items-center gap-2 px-3 py-2 border border-gray-600 rounded cursor-pointer whitespace-nowrap flex-shrink-0 transition-colors ${
+                  cartItems.length === 0
+                    ? "bg-[#2B3544] text-gray-500 cursor-not-allowed"
+                    : "bg-[#2B3544] text-gray-300 hover:text-white hover:bg-[#374151]"
+                }`}
+                title="طباعة مراجعة للطلب الحالي"
               >
                 <PrinterIcon className="h-4 w-4" />
                 <span className="text-xs">طباعة ريسيت</span>
+              </button>
+
+              <button
+                onClick={openPDFPreview}
+                disabled={cartItems.length === 0}
+                className={`flex items-center gap-2 px-3 py-2 border border-gray-600 rounded cursor-pointer whitespace-nowrap flex-shrink-0 transition-colors ${
+                  cartItems.length === 0
+                    ? "bg-[#2B3544] text-gray-500 cursor-not-allowed"
+                    : "bg-[#2B3544] text-blue-400 hover:text-blue-300 hover:bg-[#374151]"
+                }`}
+                title="معاينة الفاتورة للإرسال للعميل"
+              >
+                <EyeIcon className="h-4 w-4" />
+                <span className="text-xs">معاينة</span>
               </button>
 
               {/* Returns Button */}
@@ -3665,13 +4531,15 @@ function POSPageContent() {
                                                   );
                                                 }
 
+                                                // Calculate unit price from totalPrice if custom price was set
+                                                const unitPrice = cartItem.isCustomPrice && cartItem.totalPrice
+                                                  ? cartItem.totalPrice / cartItem.quantity
+                                                  : cartItem.price;
                                                 return {
                                                   ...cartItem,
                                                   quantity: newQuantity,
                                                   selectedColors: newSelectedColors,
-                                                  totalPrice: cartItem.isCustomPrice
-                                                    ? cartItem.totalPrice
-                                                    : cartItem.price * newQuantity,
+                                                  totalPrice: unitPrice * newQuantity,
                                                 };
                                               }
                                               return cartItem;
@@ -4093,13 +4961,15 @@ function POSPageContent() {
                                         );
                                       }
 
+                                      const newTotal = isTransferMode
+                                        ? 0
+                                        : cartItem.price * newQuantity;
                                       return {
                                         ...cartItem,
                                         quantity: newQuantity,
                                         selectedColors: updatedColors,
-                                        total: isTransferMode
-                                          ? 0
-                                          : cartItem.price * newQuantity,
+                                        total: newTotal,
+                                        totalPrice: newTotal,
                                       };
                                     }
                                     return cartItem;
@@ -4124,16 +4994,18 @@ function POSPageContent() {
                                   step="0.01"
                                   onUpdate={(newPrice) => {
                                     setCartItems((prev) => {
-                                      const newCart = prev.map((cartItem) =>
-                                        cartItem.id === item.id
-                                          ? {
-                                              ...cartItem,
-                                              price: newPrice,
-                                              total:
-                                                cartItem.quantity * newPrice,
-                                            }
-                                          : cartItem,
-                                      );
+                                      const newCart = prev.map((cartItem) => {
+                                        if (cartItem.id === item.id) {
+                                          const newTotal = cartItem.quantity * newPrice;
+                                          return {
+                                            ...cartItem,
+                                            price: newPrice,
+                                            total: newTotal,
+                                            totalPrice: newTotal,
+                                          };
+                                        }
+                                        return cartItem;
+                                      });
                                       updateActiveTabCart(newCart);
                                       return newCart;
                                     });
