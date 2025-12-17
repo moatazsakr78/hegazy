@@ -160,59 +160,9 @@ export async function createPurchaseInvoice({
       throw new Error(`خطأ في إضافة عناصر فاتورة الشراء: ${purchaseItemsError.message}`)
     }
 
-    // Also create invoice entry for main record (السجل الرئيسي) if selected record is not the main record
-    // Skip this if "no safe" option was selected
-    const MAIN_RECORD_ID = '89d38477-6a3a-4c02-95f2-ddafa5880706' // The main record ID from the database
-
-    if (!hasNoSafe && selections.record.id !== MAIN_RECORD_ID) {
-      const { error: mainRecordError } = await supabase
-        .from('purchase_invoices')
-        .insert({
-          invoice_number: `${invoiceNumber}-MAIN`,
-          supplier_id: selections.supplier.id,
-          invoice_date: now.toISOString().split('T')[0],
-          total_amount: totalAmount,
-          tax_amount: taxAmount,
-          discount_amount: discountAmount,
-          net_amount: netAmount,
-          payment_status: 'pending',
-          notes: `نسخة من فاتورة الشراء الأصلية: ${invoiceNumber}${notes ? ` - ${notes}` : ''}`,
-          branch_id: branchId,
-          warehouse_id: warehouseId,
-          record_id: MAIN_RECORD_ID, // Always add to main record
-          time: timeString,
-          invoice_type: (isReturn ? 'Purchase Return' : 'Purchase Invoice') as any,
-          is_active: true
-        })
-
-      if (mainRecordError) {
-        console.warn('Failed to create main record entry:', mainRecordError.message)
-        // Don't throw error here as the main invoice was created successfully
-      } else {
-        // Get the main record purchase invoice ID for creating purchase items
-        const { data: mainPurchaseData, error: mainPurchaseSelectError } = await supabase
-          .from('purchase_invoices')
-          .select('id')
-          .eq('invoice_number', `${invoiceNumber}-MAIN`)
-          .single()
-
-        if (!mainPurchaseSelectError && mainPurchaseData) {
-          // Create purchase items for main record
-          const mainPurchaseItems = purchaseItems.map(item => ({
-            ...item,
-            purchase_invoice_id: mainPurchaseData.id
-          }))
-
-          const { error: mainPurchaseItemsError } = await supabase
-            .from('purchase_invoice_items')
-            .insert(mainPurchaseItems)
-
-          if (mainPurchaseItemsError) {
-            console.warn('Failed to create main record purchase items:', mainPurchaseItemsError.message)
-          }
-        }
-      }
-    }
+    // NOTE: Removed the logic that creates a copy in the main record
+    // Now purchase invoices only appear in the explicitly selected safe
+    // If "no safe" is selected (hasNoSafe = true), record_id will be null and won't appear in any safe
 
     // Update inventory quantities (increase for purchases)
     const locationId = branchId || warehouseId

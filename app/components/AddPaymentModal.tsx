@@ -51,10 +51,8 @@ export default function AddPaymentModal({
 
         setRecords(data || [])
 
-        // Auto-select first record if available
-        if (data && data.length > 0) {
-          setRecordId(data[0].id)
-        }
+        // لا نختار خزنة تلقائياً - نبدأ بـ "لا يوجد"
+        setRecordId('')
       } catch (error) {
         console.error('Error fetching records:', error)
       } finally {
@@ -84,10 +82,7 @@ export default function AddPaymentModal({
       return
     }
 
-    if (!recordId) {
-      alert('يرجى اختيار الخزنة')
-      return
-    }
+    // الخزنة اختيارية - يمكن أن تكون "لا يوجد"
 
     const paymentAmount = parseFloat(amount)
 
@@ -121,6 +116,63 @@ export default function AddPaymentModal({
           alert('حدث خطأ أثناء إضافة الدفعة')
           return
         }
+
+        // Record payment in the selected safe (if a safe was selected)
+        if (recordId && paymentMethod === 'cash') {
+          try {
+            // Get or create drawer for this record
+            let { data: drawer, error: drawerError } = await supabase
+              .from('cash_drawers')
+              .select('*')
+              .eq('record_id', recordId)
+              .single()
+
+            if (drawerError && drawerError.code === 'PGRST116') {
+              // Drawer doesn't exist, create it
+              const { data: newDrawer, error: createError } = await supabase
+                .from('cash_drawers')
+                .insert({ record_id: recordId, current_balance: 0 })
+                .select()
+                .single()
+
+              if (!createError) {
+                drawer = newDrawer
+              }
+            }
+
+            if (drawer) {
+              // Calculate new balance (customer payment adds to drawer)
+              const newBalance = (drawer.current_balance || 0) + paymentAmount
+
+              // Update drawer balance
+              await supabase
+                .from('cash_drawers')
+                .update({
+                  current_balance: newBalance,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', drawer.id)
+
+              // Create transaction record
+              await supabase
+                .from('cash_drawer_transactions')
+                .insert({
+                  drawer_id: drawer.id,
+                  record_id: recordId,
+                  transaction_type: 'deposit',
+                  amount: paymentAmount,
+                  balance_after: newBalance,
+                  notes: `دفعة من عميل: ${entityName}${notes ? ` - ${notes}` : ''}`,
+                  performed_by: 'system'
+                })
+
+              console.log(`✅ Cash drawer updated with customer payment: +${paymentAmount}, new balance: ${newBalance}`)
+            }
+          } catch (drawerError) {
+            console.warn('Failed to update cash drawer with customer payment:', drawerError)
+            // Don't throw error here as the payment was created successfully
+          }
+        }
       } else {
         const { data, error } = await supabase
           .from('supplier_payments')
@@ -139,6 +191,64 @@ export default function AddPaymentModal({
           console.error('Error adding payment:', error)
           alert('حدث خطأ أثناء إضافة الدفعة')
           return
+        }
+
+        // Record payment in the selected safe (if a safe was selected)
+        // For supplier payments, money goes OUT of the drawer (negative)
+        if (recordId && paymentMethod === 'cash') {
+          try {
+            // Get or create drawer for this record
+            let { data: drawer, error: drawerError } = await supabase
+              .from('cash_drawers')
+              .select('*')
+              .eq('record_id', recordId)
+              .single()
+
+            if (drawerError && drawerError.code === 'PGRST116') {
+              // Drawer doesn't exist, create it
+              const { data: newDrawer, error: createError } = await supabase
+                .from('cash_drawers')
+                .insert({ record_id: recordId, current_balance: 0 })
+                .select()
+                .single()
+
+              if (!createError) {
+                drawer = newDrawer
+              }
+            }
+
+            if (drawer) {
+              // Calculate new balance (supplier payment removes from drawer)
+              const newBalance = (drawer.current_balance || 0) - paymentAmount
+
+              // Update drawer balance
+              await supabase
+                .from('cash_drawers')
+                .update({
+                  current_balance: newBalance,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', drawer.id)
+
+              // Create transaction record
+              await supabase
+                .from('cash_drawer_transactions')
+                .insert({
+                  drawer_id: drawer.id,
+                  record_id: recordId,
+                  transaction_type: 'withdrawal',
+                  amount: -paymentAmount,
+                  balance_after: newBalance,
+                  notes: `دفعة لمورد: ${entityName}${notes ? ` - ${notes}` : ''}`,
+                  performed_by: 'system'
+                })
+
+              console.log(`✅ Cash drawer updated with supplier payment: -${paymentAmount}, new balance: ${newBalance}`)
+            }
+          } catch (drawerError) {
+            console.warn('Failed to update cash drawer with supplier payment:', drawerError)
+            // Don't throw error here as the payment was created successfully
+          }
         }
       }
 
@@ -231,21 +341,17 @@ export default function AddPaymentModal({
             {/* Record Selection */}
             <div>
               <label className="block text-gray-300 text-sm font-medium mb-2 text-right">
-                الخزنة <span className="text-red-400">*</span>
+                الخزنة
               </label>
               {isLoadingRecords ? (
-                <div className="text-gray-400 text-sm text-center py-2">جاري تحميل الخزنةات...</div>
-              ) : records.length === 0 ? (
-                <div className="text-red-400 text-sm text-center py-2">
-                  لا توجد سجلات نشطة. يرجى إنشاء سجل أولاً.
-                </div>
+                <div className="text-gray-400 text-sm text-center py-2">جاري تحميل الخزنات...</div>
               ) : (
                 <select
                   value={recordId}
                   onChange={(e) => setRecordId(e.target.value)}
                   className="w-full px-4 py-2 bg-[#1F2937] border border-gray-600 rounded text-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
                 >
+                  <option value="">لا يوجد</option>
                   {records.map((record) => (
                     <option key={record.id} value={record.id}>
                       {record.name}
@@ -298,7 +404,7 @@ export default function AddPaymentModal({
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || records.length === 0 || !amount || parseFloat(amount) <= 0}
+                disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'جاري الإضافة...' : 'إضافة الدفعة'}

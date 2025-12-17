@@ -69,6 +69,10 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
   const [accountStatementData, setAccountStatementData] = useState<any[]>([])
   const [isLoadingStatement, setIsLoadingStatement] = useState(false)
 
+  // Transfers state (deposits and withdrawals from cash_drawer_transactions)
+  const [transfers, setTransfers] = useState<any[]>([])
+  const [isLoadingTransfers, setIsLoadingTransfers] = useState(false)
+
   // The safe balance is the actual cash drawer balance (paid amounts, not invoice totals)
   // This is fetched from the cash_drawers table
   const safeBalance = cashDrawerBalance
@@ -315,6 +319,51 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
     }
   }
 
+  // Fetch transfers (deposits and withdrawals - not sales)
+  const fetchTransfers = async () => {
+    if (!safe?.id) return
+
+    try {
+      setIsLoadingTransfers(true)
+
+      // Get all non-sale transactions (deposits, withdrawals, adjustments)
+      const { data, error } = await supabase
+        .from('cash_drawer_transactions')
+        .select('id, amount, transaction_type, notes, created_at, balance_after')
+        .eq('record_id', safe.id)
+        .is('sale_id', null) // Only get non-sale transactions
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching transfers:', error)
+        setTransfers([])
+        return
+      }
+
+      // Format the data for display
+      const formattedTransfers = (data || []).map((tx, index) => {
+        const createdDate = tx.created_at ? new Date(tx.created_at) : new Date()
+        return {
+          id: index + 1,
+          dbId: tx.id,
+          date: createdDate.toLocaleDateString('en-GB'),
+          time: createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          amount: tx.amount,
+          type: tx.transaction_type,
+          notes: tx.notes || '-',
+          balance_after: tx.balance_after
+        }
+      })
+
+      setTransfers(formattedTransfers)
+    } catch (error) {
+      console.error('Error fetching transfers:', error)
+      setTransfers([])
+    } finally {
+      setIsLoadingTransfers(false)
+    }
+  }
+
   // Fetch account statement data from database
   const fetchAccountStatement = async () => {
     if (!safe?.id) return
@@ -353,6 +402,13 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
       // 2. Get all sales for this record (فواتير البيع و مرتجعات البيع)
       const { data: salesData, error: salesError } = await supabase
         .from('sales')
+        .select('id, invoice_number, total_amount, invoice_type, created_at, time, notes')
+        .eq('record_id', safe.id)
+        .order('created_at', { ascending: true })
+
+      // 2.5. Get all purchase invoices for this record (فواتير الشراء و مرتجعات الشراء)
+      const { data: purchaseData, error: purchaseError } = await supabase
+        .from('purchase_invoices')
         .select('id, invoice_number, total_amount, invoice_type, created_at, time, notes')
         .eq('record_id', safe.id)
         .order('created_at', { ascending: true })
@@ -411,6 +467,39 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
         }
       }
 
+      // Process purchase invoices data (فواتير الشراء تنقص من الرصيد)
+      if (purchaseData) {
+        for (const purchase of purchaseData) {
+          const invoiceValue = parseFloat(String(purchase.total_amount || 0)) || 0
+
+          // Determine type based on invoice_type
+          // Purchase Invoice = money goes out (negative)
+          // Purchase Return = money comes back (positive)
+          let typeName = 'فاتورة شراء'
+          let isPositiveAmount = false
+          if (purchase.invoice_type === 'Purchase Return') {
+            typeName = 'مرتجع شراء'
+            isPositiveAmount = true
+          }
+
+          const createdDate = purchase.created_at ? new Date(purchase.created_at) : new Date()
+          const timeStr = purchase.time ? String(purchase.time).substring(0, 5) : createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+
+          statements.push({
+            id: purchase.id,
+            date: createdDate.toLocaleDateString('en-GB'),
+            time: timeStr,
+            description: `${typeName} - ${purchase.invoice_number}`,
+            type: typeName,
+            paidAmount: Math.abs(invoiceValue),
+            invoiceValue: Math.abs(invoiceValue),
+            balance: runningBalance, // Will be recalculated later
+            created_at: purchase.created_at || new Date().toISOString(),
+            isPositive: isPositiveAmount
+          })
+        }
+      }
+
       // Process non-sale transactions (deposits, withdrawals, adjustments)
       if (transactionsData) {
         for (const tx of transactionsData) {
@@ -455,9 +544,14 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
       for (const stmt of sortedAsc) {
         if (stmt.type === 'رصيد أولي') {
           recalcBalance = stmt.paidAmount
-        } else if (stmt.type === 'مرتجع بيع' || stmt.type === 'سحب') {
+        } else if (stmt.type === 'مرتجع بيع' || stmt.type === 'سحب' || stmt.type === 'فاتورة شراء') {
+          // These decrease the balance (money going out)
           recalcBalance -= stmt.paidAmount
+        } else if (stmt.type === 'مرتجع شراء') {
+          // Purchase returns increase the balance (money coming back)
+          recalcBalance += stmt.paidAmount
         } else {
+          // Sales and deposits increase the balance
           recalcBalance += stmt.paidAmount
         }
         stmt.balance = recalcBalance
@@ -982,6 +1076,7 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
       fetchPurchaseInvoices()
       fetchCashDrawerBalance()
       fetchAccountStatement()
+      fetchTransfers()
 
       // Set up real-time subscription for sales
       const salesChannel = supabase
@@ -1047,12 +1142,26 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
         )
         .subscribe()
 
+      // Set up real-time subscription for cash_drawer_transactions (to update transfers)
+      const cashTransactionsChannel = supabase
+        .channel('record_modal_cash_transactions_changes')
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'cash_drawer_transactions' },
+          (payload: any) => {
+            console.log('Cash drawer transactions real-time update:', payload)
+            fetchTransfers()
+            fetchAccountStatement() // Also update account statement
+          }
+        )
+        .subscribe()
+
       return () => {
         supabase.removeChannel(salesChannel)
         supabase.removeChannel(saleItemsChannel)
         supabase.removeChannel(purchaseInvoicesChannel)
         supabase.removeChannel(purchaseInvoiceItemsChannel)
         supabase.removeChannel(cashDrawersChannel)
+        supabase.removeChannel(cashTransactionsChannel)
       }
     }
   }, [isOpen, safe?.id, dateFilter, isLoadingPreferences])
@@ -1532,8 +1641,8 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
 
   if (!safe) return null
 
-  // Transfers data - empty (no mock data)
-  const payments: { id: number; date: string; time: string; amount: string; notes: string }[] = []
+  // Transfers data - now uses real data from state
+  // transfers state is populated by fetchTransfers()
 
   // Sample invoices data
   const transactions = [
@@ -1818,12 +1927,34 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
       width: 150,
       render: (value: string, item: any) => <span className="text-gray-300 font-mono text-sm">{item.client?.phone || '-'}</span>
     },
-    { 
-      id: 'total_amount', 
-      header: 'المبلغ الإجمالي', 
-      accessor: 'total_amount', 
+    {
+      id: 'total_amount',
+      header: 'المبلغ الإجمالي',
+      accessor: 'total_amount',
       width: 150,
-      render: (value: number) => <span className="text-green-400 font-medium">{formatPrice(value, 'system')}</span>
+      render: (value: number, item: any) => {
+        // Purchase invoices should show as negative (money going out from safe)
+        // Purchase returns should show as positive (money coming back to safe)
+        // Sales invoices should show as positive (money coming in)
+        // Sales returns should show as negative (money going out)
+        const isPurchase = item.transactionType === 'purchase'
+        const isReturn = item.invoice_type === 'Purchase Return' || item.invoice_type === 'Sale Return'
+
+        // Determine if amount should be negative
+        // Purchase Invoice = negative (money out)
+        // Purchase Return = positive (money back)
+        // Sale Invoice = positive (money in)
+        // Sale Return = negative (money out)
+        const shouldBeNegative = (isPurchase && !isReturn) || (!isPurchase && isReturn)
+        const displayAmount = shouldBeNegative ? -Math.abs(value) : Math.abs(value)
+        const colorClass = shouldBeNegative ? 'text-red-400' : 'text-green-400'
+
+        return (
+          <span className={`${colorClass} font-medium`}>
+            {shouldBeNegative ? '-' : ''}{formatPrice(Math.abs(value), 'system')}
+          </span>
+        )
+      }
     },
     { 
       id: 'payment_method', 
@@ -1905,41 +2036,68 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
   ]
 
   const paymentsColumns = [
-    { 
-      id: 'index', 
-      header: '#', 
-      accessor: '#', 
+    {
+      id: 'index',
+      header: '#',
+      accessor: '#',
       width: 50,
       render: (value: any, item: any, index: number) => (
         <span className="text-gray-400">{item.id}</span>
       )
     },
-    { 
-      id: 'date', 
-      header: 'التاريخ', 
-      accessor: 'date', 
+    {
+      id: 'date',
+      header: 'التاريخ',
+      accessor: 'date',
       width: 120,
       render: (value: string) => <span className="text-white">{value}</span>
     },
-    { 
-      id: 'time', 
-      header: '⏰ الساعة', 
-      accessor: 'time', 
-      width: 80,
+    {
+      id: 'time',
+      header: '⏰ الساعة',
+      accessor: 'time',
+      width: 100,
       render: (value: string) => <span className="text-blue-400">{value}</span>
     },
-    { 
-      id: 'amount', 
-      header: 'المبلغ', 
-      accessor: 'amount', 
-      width: 140,
-      render: (value: string) => <span className="text-green-400 font-medium">{value}</span>
+    {
+      id: 'type',
+      header: 'نوع العملية',
+      accessor: 'type',
+      width: 120,
+      render: (value: string) => {
+        const typeMap: { [key: string]: { text: string; color: string; bg: string } } = {
+          'deposit': { text: 'إيداع', color: 'text-green-400', bg: 'bg-green-600/20 border-green-600' },
+          'withdrawal': { text: 'سحب', color: 'text-red-400', bg: 'bg-red-600/20 border-red-600' },
+          'adjustment': { text: 'تسوية', color: 'text-yellow-400', bg: 'bg-yellow-600/20 border-yellow-600' },
+          'transfer': { text: 'تحويل', color: 'text-blue-400', bg: 'bg-blue-600/20 border-blue-600' }
+        }
+        const typeInfo = typeMap[value] || { text: value || '-', color: 'text-gray-400', bg: 'bg-gray-600/20 border-gray-600' }
+        return (
+          <span className={`px-2 py-1 rounded text-xs font-medium border ${typeInfo.bg} ${typeInfo.color}`}>
+            {typeInfo.text}
+          </span>
+        )
+      }
     },
-    { 
-      id: 'notes', 
-      header: 'الملاحظات', 
-      accessor: 'notes', 
-      width: 200,
+    {
+      id: 'amount',
+      header: 'المبلغ',
+      accessor: 'amount',
+      width: 140,
+      render: (value: number) => {
+        const isPositive = value >= 0
+        return (
+          <span className={`font-medium ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+            {isPositive ? '+' : ''}{formatPrice(value, 'system')}
+          </span>
+        )
+      }
+    },
+    {
+      id: 'notes',
+      header: 'الملاحظات',
+      accessor: 'notes',
+      width: 250,
       render: (value: string) => <span className="text-gray-400">{value}</span>
     }
   ]
@@ -2532,18 +2690,35 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
                       <div className="flex items-center justify-end">
                         <div className="text-right">
                           <div className="text-white text-lg font-medium">تحويلات الخزنة</div>
-                          <div className="text-gray-400 text-sm mt-1">إجمالي التحويلات: {formatPrice(13000)}</div>
+                          <div className="text-gray-400 text-sm mt-1">
+                            إجمالي التحويلات: {formatPrice(transfers.reduce((sum, t) => sum + (t.amount || 0), 0), 'system')}
+                            <span className="mx-2">|</span>
+                            عدد العمليات: {transfers.length}
+                          </div>
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Payments Table */}
                     <div className="flex-1">
-                      <ResizableTable
-                        className="h-full w-full"
-                        columns={paymentsColumns}
-                        data={payments}
-                      />
+                      {isLoadingTransfers ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
+                          <span className="text-gray-400">جاري تحميل التحويلات...</span>
+                        </div>
+                      ) : transfers.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full p-8">
+                          <div className="text-6xl mb-4">💸</div>
+                          <p className="text-gray-400 text-lg mb-2">لا توجد تحويلات مسجلة</p>
+                          <p className="text-gray-500 text-sm">الإيداعات والسحوبات ستظهر هنا</p>
+                        </div>
+                      ) : (
+                        <ResizableTable
+                          className="h-full w-full"
+                          columns={paymentsColumns}
+                          data={transfers}
+                        />
+                      )}
                     </div>
                   </div>
                 )}

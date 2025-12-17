@@ -424,6 +424,26 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
         return
       }
 
+      // Get cash drawer transactions to get actual paid amounts for each sale
+      const saleIds = salesData?.map(s => s.id) || []
+      let paidAmountsMap = new Map<string, number>()
+
+      if (saleIds.length > 0) {
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('cash_drawer_transactions')
+          .select('sale_id, amount')
+          .in('sale_id', saleIds)
+          .eq('transaction_type', 'sale')
+
+        if (!transactionsError && transactionsData) {
+          for (const tx of transactionsData) {
+            if (tx.sale_id) {
+              paidAmountsMap.set(tx.sale_id, tx.amount || 0)
+            }
+          }
+        }
+      }
+
       // Build statement array
       const statements: any[] = []
 
@@ -434,6 +454,11 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
           const saleDate = new Date(sale.created_at)
           const isReturn = sale.invoice_type === 'Sale Return'
           const typeName = isReturn ? 'مرتجع بيع' : 'فاتورة بيع'
+
+          // Get actual paid amount from cash drawer transactions
+          // If no transaction found, paid amount is 0 (credit sale)
+          const actualPaidAmount = paidAmountsMap.get(sale.id) || 0
+
           statements.push({
             id: `sale-${sale.id}`,
             saleId: sale.id,
@@ -442,7 +467,7 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
             type: typeName,
             amount: sale.total_amount, // Already negative for returns
             invoiceValue: Math.abs(sale.total_amount),
-            paidAmount: Math.abs(sale.total_amount),
+            paidAmount: Math.abs(actualPaidAmount), // Use actual paid amount from transactions
             balance: 0, // Will be calculated
             isNegative: isReturn
           })
