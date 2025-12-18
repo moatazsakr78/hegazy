@@ -321,9 +321,10 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
       }
 
       // Get all payments for this customer (without date filter)
+      // Include notes to determine if it's a loan or regular payment
       const { data: allPayments, error: paymentsError } = await supabase
         .from('customer_payments')
-        .select('amount')
+        .select('amount, notes')
         .eq('customer_id', customer.id)
 
       if (paymentsError) {
@@ -337,13 +338,25 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
         return total + (sale.total_amount || 0)
       }, 0)
 
-      // Calculate total payments
-      const totalPayments = (allPayments || []).reduce((total, payment) => {
-        return total + (payment.amount || 0)
-      }, 0)
+      // Calculate payments with proper handling for loans vs regular payments
+      // السلفة (loan/advance) = adds to balance (customer owes more)
+      // الدفعة (payment) = reduces balance (customer paid their debt)
+      let totalRegularPayments = 0
+      let totalLoans = 0
 
-      // Final balance = Sales Balance - Total Payments
-      const finalBalance = salesBalance - totalPayments
+      ;(allPayments || []).forEach(payment => {
+        const isLoan = payment.notes?.startsWith('سلفة')
+        if (isLoan) {
+          // سلفة: يضاف للرصيد (العميل مدين أكثر)
+          totalLoans += (payment.amount || 0)
+        } else {
+          // دفعة: يخصم من الرصيد (العميل دفع جزء من دينه)
+          totalRegularPayments += (payment.amount || 0)
+        }
+      })
+
+      // Final balance = Sales Balance + Loans - Regular Payments
+      const finalBalance = salesBalance + totalLoans - totalRegularPayments
 
       setCustomerBalance(finalBalance)
     } catch (error) {

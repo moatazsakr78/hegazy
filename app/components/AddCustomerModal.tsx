@@ -235,10 +235,10 @@ export default function AddCustomerModal({ isOpen, onClose }: AddCustomerModalPr
       )}
 
       {/* Sidebar - wider for customer form */}
-      <div className={`fixed top-12 right-0 h-[calc(100vh-3rem)] w-[500px] bg-[#3A4553] z-50 transform transition-transform duration-300 ease-in-out ${
+      <div className={`fixed top-12 right-0 h-[calc(100vh-3rem)] w-[500px] bg-[#3A4553] z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       } shadow-2xl`}>
-        
+
         {/* Header */}
         <div className="bg-[#3A4553] px-4 py-3 flex items-center justify-start border-b border-[#4A5568]">
           <h2 className="text-white text-lg font-medium flex-1 text-right">إضافة عميل</h2>
@@ -273,7 +273,7 @@ export default function AddCustomerModal({ isOpen, onClose }: AddCustomerModalPr
         </div>
 
         {/* Content Area - Scrollable */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto scrollbar-hide p-6 pb-24 space-y-4">
 
           {/* Error/Success Messages */}
           {error && (
@@ -327,10 +327,10 @@ export default function AddCustomerModal({ isOpen, onClose }: AddCustomerModalPr
             )}
           </div>
 
-          {/* Account Balance */}
+          {/* Opening Balance */}
           <div className="space-y-2">
             <label className="block text-white text-sm font-medium text-right">
-              رصيد الحساب
+              الرصيد الافتتاحي للعميل
             </label>
             <input
               type="number"
@@ -340,6 +340,9 @@ export default function AddCustomerModal({ isOpen, onClose }: AddCustomerModalPr
               placeholder="0.00"
               className="w-full px-3 py-2 bg-[#2B3441] border border-[#4A5568] rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#5DADE2] focus:border-[#5DADE2] text-right text-sm"
             />
+            <p className="text-gray-400 text-xs text-right">
+              هذا الرصيد يُحدد مرة واحدة فقط عند إضافة العميل ولا يمكن تعديله لاحقاً
+            </p>
           </div>
 
           {/* Allowed Limit */}

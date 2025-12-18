@@ -173,6 +173,7 @@ export default function EditCustomerModal({ isOpen, onClose, customer }: EditCus
       const selectedRank = ranks.find(rank => rank.id === formData.rank)
 
       // Prepare customer data for update
+      // Note: account_balance (opening balance) is NOT included - it can only be set when creating a customer
       const customerData = {
         name: formData.name.trim(),
         phone: formData.phone.trim() || null,
@@ -182,7 +183,6 @@ export default function EditCustomerModal({ isOpen, onClose, customer }: EditCus
         group_id: formData.group || null,
         rank: selectedRank?.id || null,
         category: formData.group ? customerGroupOptions.find(opt => opt.value === formData.group)?.label : null,
-        account_balance: formData.accountBalance ? parseFloat(formData.accountBalance) : 0,
         credit_limit: formData.allowedLimit ? parseFloat(formData.allowedLimit) : 1000,
         updated_at: new Date().toISOString(),
         default_record_id: formData.defaultRecordId || null,
@@ -262,10 +262,10 @@ export default function EditCustomerModal({ isOpen, onClose, customer }: EditCus
       )}
 
       {/* Sidebar - wider for customer form */}
-      <div className={`fixed top-12 right-0 h-[calc(100vh-3rem)] w-[500px] bg-[#3A4553] z-50 transform transition-transform duration-300 ease-in-out ${
+      <div className={`fixed top-12 right-0 h-[calc(100vh-3rem)] w-[500px] bg-[#3A4553] z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       } shadow-2xl`}>
-        
+
         {/* Header */}
         <div className="bg-[#3A4553] px-4 py-3 flex items-center justify-start border-b border-[#4A5568]">
           <h2 className="text-white text-lg font-medium flex-1 text-right">تحرير عميل</h2>
@@ -300,7 +300,7 @@ export default function EditCustomerModal({ isOpen, onClose, customer }: EditCus
         </div>
 
         {/* Content Area - Scrollable */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto scrollbar-hide p-6 pb-24 space-y-4">
 
           {/* Error/Success Messages */}
           {error && (
@@ -354,19 +354,22 @@ export default function EditCustomerModal({ isOpen, onClose, customer }: EditCus
             )}
           </div>
 
-          {/* Account Balance */}
+          {/* Opening Balance - Read Only */}
           <div className="space-y-2">
             <label className="block text-white text-sm font-medium text-right">
-              رصيد الحساب
+              الرصيد الافتتاحي للعميل
             </label>
             <input
               type="number"
               name="accountBalance"
               value={formData.accountBalance}
-              onChange={handleInputChange}
-              placeholder="0.00"
-              className="w-full px-3 py-2 bg-[#2B3441] border border-[#4A5568] rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#5DADE2] focus:border-[#5DADE2] text-right text-sm"
+              readOnly
+              disabled
+              className="w-full px-3 py-2 bg-[#1F2937] border border-[#374151] rounded text-gray-400 text-right text-sm cursor-not-allowed"
             />
+            <p className="text-gray-500 text-xs text-right">
+              الرصيد الافتتاحي لا يمكن تعديله بعد إنشاء العميل
+            </p>
           </div>
 
           {/* Allowed Limit */}

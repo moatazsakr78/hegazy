@@ -35,8 +35,10 @@ export default function AddPaymentModal({
   const [records, setRecords] = useState<any[]>([])
   const [isLoadingRecords, setIsLoadingRecords] = useState(false)
   const [paymentType, setPaymentType] = useState<'payment' | 'loan'>(initialPaymentType)
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([])
+  const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(false)
 
-  // Fetch records
+  // Fetch records and payment methods
   useEffect(() => {
     const fetchRecords = async () => {
       setIsLoadingRecords(true)
@@ -63,8 +65,37 @@ export default function AddPaymentModal({
       }
     }
 
+    const fetchPaymentMethods = async () => {
+      setIsLoadingPaymentMethods(true)
+      try {
+        const { data, error } = await supabase
+          .from('payment_methods')
+          .select('id, name, is_default, is_active')
+          .eq('is_active', true)
+          .order('is_default', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching payment methods:', error)
+          return
+        }
+
+        setPaymentMethods(data || [])
+
+        // Set default payment method
+        const defaultMethod = data?.find(m => m.is_default)
+        if (defaultMethod) {
+          setPaymentMethod(defaultMethod.name)
+        }
+      } catch (error) {
+        console.error('Error fetching payment methods:', error)
+      } finally {
+        setIsLoadingPaymentMethods(false)
+      }
+    }
+
     if (isOpen) {
       fetchRecords()
+      fetchPaymentMethods()
     }
   }, [isOpen])
 
@@ -447,16 +478,21 @@ export default function AddPaymentModal({
               <label className="block text-gray-300 text-sm font-medium mb-2 text-right">
                 طريقة الدفع
               </label>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full px-4 py-2 bg-[#1F2937] border border-gray-600 rounded text-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="cash">نقدي</option>
-                <option value="card">بطاقة</option>
-                <option value="bank_transfer">تحويل بنكي</option>
-                <option value="check">شيك</option>
-              </select>
+              {isLoadingPaymentMethods ? (
+                <div className="text-gray-400 text-sm text-center py-2">جاري تحميل طرق الدفع...</div>
+              ) : (
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full px-4 py-2 bg-[#1F2937] border border-gray-600 rounded text-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {paymentMethods.map((method) => (
+                    <option key={method.id} value={method.name}>
+                      {method.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* البيان */}

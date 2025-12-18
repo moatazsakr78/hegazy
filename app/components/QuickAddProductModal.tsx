@@ -21,6 +21,11 @@ export default function QuickAddProductModal({ isOpen, onClose, onAddToCart }: Q
   const [productQuantity, setProductQuantity] = useState('1')
   const [productCostPrice, setProductCostPrice] = useState('')
   const [productPrice, setProductPrice] = useState('')
+  const [wholesalePrice, setWholesalePrice] = useState('')
+  const [price1, setPrice1] = useState('')
+  const [price2, setPrice2] = useState('')
+  const [price3, setPrice3] = useState('')
+  const [price4, setPrice4] = useState('')
   const [productBarcode, setProductBarcode] = useState('')
   const [productDescription, setProductDescription] = useState('')
   const [productImage, setProductImage] = useState<string | null>(null)
@@ -33,6 +38,11 @@ export default function QuickAddProductModal({ isOpen, onClose, onAddToCart }: Q
     setProductQuantity('1')
     setProductCostPrice('')
     setProductPrice('')
+    setWholesalePrice('')
+    setPrice1('')
+    setPrice2('')
+    setPrice3('')
+    setPrice4('')
     setProductBarcode('')
     setProductDescription('')
     setProductImage(null)
@@ -93,6 +103,11 @@ export default function QuickAddProductModal({ isOpen, onClose, onAddToCart }: Q
         name: productName.trim(),
         price: productPrice ? parseFloat(productPrice) : 0,
         cost_price: parseFloat(productCostPrice) || 0,
+        wholesale_price: wholesalePrice ? parseFloat(wholesalePrice) : 0,
+        price_1: price1 ? parseFloat(price1) : 0,
+        price_2: price2 ? parseFloat(price2) : 0,
+        price_3: price3 ? parseFloat(price3) : 0,
+        price_4: price4 ? parseFloat(price4) : 0,
         barcode: productBarcode.trim() || null,
         description: productDescription.trim() || null,
         main_image_url: productImage,
@@ -187,21 +202,106 @@ export default function QuickAddProductModal({ isOpen, onClose, onAddToCart }: Q
             />
           </div>
 
-          {/* Selling Price */}
-          <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">
-              سعر البيع
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={productPrice}
-              onChange={(e) => setProductPrice(e.target.value)}
-              className="w-full bg-[#374151] border border-[#4A5568] rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-              placeholder="0.00"
-              disabled={isProcessing}
-            />
+          {/* Selling Prices - Row 1: سعر البيع + سعر الجملة */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">
+                سعر البيع
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={productPrice}
+                onChange={(e) => setProductPrice(e.target.value)}
+                className="w-full bg-[#374151] border border-[#4A5568] rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                placeholder="0.00"
+                disabled={isProcessing}
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">
+                سعر الجملة
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={wholesalePrice}
+                onChange={(e) => setWholesalePrice(e.target.value)}
+                className="w-full bg-[#374151] border border-[#4A5568] rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                placeholder="0.00"
+                disabled={isProcessing}
+              />
+            </div>
+          </div>
+
+          {/* Prices - Row 2: سعر 1 + سعر 2 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">
+                سعر 1
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={price1}
+                onChange={(e) => setPrice1(e.target.value)}
+                className="w-full bg-[#374151] border border-[#4A5568] rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                placeholder="0.00"
+                disabled={isProcessing}
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">
+                سعر 2
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={price2}
+                onChange={(e) => setPrice2(e.target.value)}
+                className="w-full bg-[#374151] border border-[#4A5568] rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                placeholder="0.00"
+                disabled={isProcessing}
+              />
+            </div>
+          </div>
+
+          {/* Prices - Row 3: سعر 3 + سعر 4 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">
+                سعر 3
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={price3}
+                onChange={(e) => setPrice3(e.target.value)}
+                className="w-full bg-[#374151] border border-[#4A5568] rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                placeholder="0.00"
+                disabled={isProcessing}
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">
+                سعر 4
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={price4}
+                onChange={(e) => setPrice4(e.target.value)}
+                className="w-full bg-[#374151] border border-[#4A5568] rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                placeholder="0.00"
+                disabled={isProcessing}
+              />
+            </div>
           </div>
 
           {/* Barcode with Generate Button */}
