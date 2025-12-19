@@ -347,11 +347,16 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
       setIsLoadingTransfers(true)
 
       // Get all non-sale transactions (deposits, withdrawals, adjustments)
-      const { data, error } = await supabase
+      let query = supabase
         .from('cash_drawer_transactions')
         .select('id, amount, transaction_type, notes, created_at, balance_after')
         .eq('record_id', safe.id)
         .is('sale_id', null) // Only get non-sale transactions
+
+      // Apply date filter
+      query = applyDateFilter(query)
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -577,8 +582,66 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
         stmt.balance = recalcBalance
       }
 
-      // Sort descending for display and add index
-      const finalStatements = sortedAsc.reverse().map((stmt, index) => ({
+      // Sort descending for display
+      const sortedDesc = sortedAsc.reverse()
+
+      // Apply date filter to final statements
+      const getDateRange = () => {
+        const now = new Date()
+        switch (dateFilter.type) {
+          case 'today':
+            const startOfDay = new Date(now)
+            startOfDay.setHours(0, 0, 0, 0)
+            const endOfDay = new Date(now)
+            endOfDay.setHours(23, 59, 59, 999)
+            return { start: startOfDay, end: endOfDay }
+          case 'current_week':
+            const dayOfWeek = now.getDay()
+            const daysToSaturday = dayOfWeek === 6 ? 0 : dayOfWeek + 1
+            const startOfWeek = new Date(now)
+            startOfWeek.setDate(now.getDate() - daysToSaturday)
+            startOfWeek.setHours(0, 0, 0, 0)
+            return { start: startOfWeek, end: now }
+          case 'last_week':
+            const lastWeekStart = new Date(now)
+            lastWeekStart.setDate(now.getDate() - 7 - (now.getDay() === 6 ? 0 : now.getDay() + 1))
+            lastWeekStart.setHours(0, 0, 0, 0)
+            const lastWeekEnd = new Date(lastWeekStart)
+            lastWeekEnd.setDate(lastWeekStart.getDate() + 6)
+            lastWeekEnd.setHours(23, 59, 59, 999)
+            return { start: lastWeekStart, end: lastWeekEnd }
+          case 'current_month':
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+            return { start: startOfMonth, end: now }
+          case 'last_month':
+            const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+            const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
+            return { start: lastMonthStart, end: lastMonthEnd }
+          case 'custom':
+            return {
+              start: dateFilter.startDate ? new Date(dateFilter.startDate) : null,
+              end: dateFilter.endDate ? new Date(dateFilter.endDate) : null
+            }
+          case 'all':
+          default:
+            return { start: null, end: null }
+        }
+      }
+
+      const dateRange = getDateRange()
+      let filteredStatements = sortedDesc
+
+      if (dateRange.start || dateRange.end) {
+        filteredStatements = sortedDesc.filter(stmt => {
+          const stmtDate = new Date(stmt.created_at)
+          if (dateRange.start && stmtDate < dateRange.start) return false
+          if (dateRange.end && stmtDate > dateRange.end) return false
+          return true
+        })
+      }
+
+      // Add index to filtered statements
+      const finalStatements = filteredStatements.map((stmt, index) => ({
         ...stmt,
         index: index + 1
       }))

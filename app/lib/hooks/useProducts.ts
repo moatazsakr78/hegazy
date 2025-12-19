@@ -709,7 +709,7 @@ export function useProducts() {
 
       // If we have sale items, get their invoice types
       if (saleItems && saleItems.length > 0) {
-        const saleIds = [...new Set(saleItems.map((item: any) => item.sale_id))]
+        const saleIds = Array.from(new Set(saleItems.map((item: any) => item.sale_id)))
 
         const { data: salesData, error: salesError } = await supabase
           .from('sales')
@@ -750,7 +750,7 @@ export function useProducts() {
 
       // If we have purchase items, get their invoice types
       if (purchaseItems && purchaseItems.length > 0) {
-        const purchaseIds = [...new Set(purchaseItems.map((item: any) => item.purchase_invoice_id))]
+        const purchaseIds = Array.from(new Set(purchaseItems.map((item: any) => item.purchase_invoice_id)))
 
         const { data: purchasesData, error: purchasesError } = await supabase
           .from('purchase_invoices')
