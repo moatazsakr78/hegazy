@@ -47,8 +47,10 @@ export default function ClientHomePage({
     cart: []
   });
 
-  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartItemsCount, refreshCart } = useRealCart();
   const { user, isAuthenticated } = useAuth();
+  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartItemsCount, refreshCart, setUserId } = useRealCart({
+    userId: user?.id || null
+  });
 
   useEffect(() => {
     // Set client flag first
@@ -57,6 +59,14 @@ export default function ClientHomePage({
     const detected = detectDeviceClient();
     setDeviceInfo(detected);
   }, []);
+
+  // Update cart session when user authentication changes
+  useEffect(() => {
+    if (isClient) {
+      const newUserId = isAuthenticated && user?.id ? user.id : null;
+      setUserId(newUserId);
+    }
+  }, [isClient, isAuthenticated, user?.id, setUserId]);
 
   // Separate effect for cart refresh
   useEffect(() => {

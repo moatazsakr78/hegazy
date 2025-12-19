@@ -74,13 +74,16 @@ export async function POST(request: Request) {
     const orderNumber = 'ORD-' + Date.now().toString().slice(-8)
 
     // Find or create customer in customers table
+    // Note: We search by email instead of user_id because user_id is uuid type
+    // and NextAuth user.id is a text string
     let customerId = null
 
-    // Check if customer already exists for this user
+    // Check if customer already exists by email or phone
     const { data: existingCustomer, error: customerCheckError } = await supabaseAdmin
       .from('customers')
       .select('id')
-      .eq('user_id', userId)
+      .or(`email.eq.${userEmail},phone.eq.${orderData.customer.phone}`)
+      .limit(1)
       .single()
 
     if (customerCheckError && customerCheckError.code !== 'PGRST116') {
@@ -107,10 +110,10 @@ export async function POST(request: Request) {
       }
     } else {
       // Customer doesn't exist, create new one
+      // Note: user_id is omitted because it's uuid type and we have text user ID
       const { data: newCustomer, error: createCustomerError } = await supabaseAdmin
         .from('customers')
         .insert({
-          user_id: userId,
           name: orderData.customer.name,
           phone: orderData.customer.phone,
           backup_phone: orderData.customer.altPhone || null,
@@ -142,12 +145,14 @@ export async function POST(request: Request) {
     }
 
     // Insert order into orders table
+    // Note: user_session is used instead of user_id because user_id is uuid type
+    // and NextAuth user.id is a text string
     const { data: orderResult, error: orderError } = await supabaseAdmin
       .from('orders')
       .insert({
         order_number: orderNumber,
         customer_id: customerId,
-        user_id: userId, // This is now the correct NextAuth user ID
+        user_session: userId, // Store NextAuth user ID in user_session (text field)
         customer_name: orderData.customer.name,
         customer_phone: orderData.customer.phone,
         customer_address: orderData.customer.address || null,

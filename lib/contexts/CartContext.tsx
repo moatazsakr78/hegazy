@@ -1,8 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useReducer } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useReducer, useRef, useCallback } from 'react';
 import { CartService } from '../cart-service';
 import { CartSession, CartItemData } from '../cart-utils';
+import { CartSessionManager } from '../cart-session-manager';
+import { useAuth } from '../useAuth';
 
 interface CartItem {
   id: string;
@@ -97,13 +99,15 @@ interface CartProviderProps {
 
 export function CartProvider({ children }: CartProviderProps) {
   const [cartItems, dispatch] = useReducer(cartReducer, []);
+  const { user, isAuthenticated } = useAuth();
+  const previousUserIdRef = useRef<string | null>(null);
 
   // Load initial cart from database
-  const syncWithDatabase = async () => {
+  const syncWithDatabase = useCallback(async () => {
     try {
       const sessionId = CartSession.getSessionId();
       const items = await CartService.getCartItems(sessionId);
-      
+
       // Convert CartItemData to CartItem format
       const convertedItems: CartItem[] = items.map(item => ({
         id: item.id,
@@ -116,12 +120,29 @@ export function CartProvider({ children }: CartProviderProps) {
         notes: item.notes || undefined,
         products: item.products
       }));
-      
+
       dispatch({ type: 'SET_CART', payload: convertedItems });
     } catch (error) {
       console.error('Error syncing cart with database:', error);
     }
-  };
+  }, []);
+
+  // Handle user authentication changes
+  useEffect(() => {
+    const currentUserId = isAuthenticated && user?.id ? user.id : null;
+
+    // Only update if user ID actually changed
+    if (currentUserId !== previousUserIdRef.current) {
+      console.log('🔄 CartContext: User changed', { from: previousUserIdRef.current, to: currentUserId });
+
+      // Update session manager with new user
+      CartSessionManager.setAuthenticatedUser(currentUserId);
+      previousUserIdRef.current = currentUserId;
+
+      // Sync cart with new session
+      syncWithDatabase();
+    }
+  }, [isAuthenticated, user?.id, syncWithDatabase]);
 
   // Local cart operations (immediate UI updates + database sync)
   const addToCart = async (productId: string, quantity: number, price: number, selectedColor?: string, selectedShape?: string, selectedSize?: string, notes?: string) => {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { CartService } from './cart-service';
 import { CartSession, CartItemData } from './cart-utils';
+import { CartSessionManager } from './cart-session-manager';
 
 export interface RealCartHook {
   cart: CartItemData[];
@@ -13,16 +14,23 @@ export interface RealCartHook {
   getCartTotal: () => number;
   getCartItemsCount: () => number;
   refreshCart: () => Promise<void>;
+  setUserId: (userId: string | null) => void;
 }
 
-export function useRealCart(): RealCartHook {
+interface UseRealCartOptions {
+  userId?: string | null;
+}
+
+export function useRealCart(options: UseRealCartOptions = {}): RealCartHook {
+  const { userId } = options;
   const [cart, setCart] = useState<CartItemData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const sessionIdRef = useRef<string>('');
   const subscriptionRef = useRef<any>(null);
   const isMountedRef = useRef(true);
+  const previousUserIdRef = useRef<string | null>(null);
   
   const refreshCart = useCallback(async () => {
     if (!sessionIdRef.current || !isMountedRef.current) return;
@@ -70,13 +78,43 @@ export function useRealCart(): RealCartHook {
     );
   }, [refreshCart]);
 
-  // Initialize session ID
+  // Handle user authentication changes and cart migration
+  const setUserId = useCallback((newUserId: string | null) => {
+    if (newUserId === previousUserIdRef.current) return;
+
+    console.log('🔄 User ID changed:', { from: previousUserIdRef.current, to: newUserId });
+
+    // Set the authenticated user in session manager
+    CartSessionManager.setAuthenticatedUser(newUserId);
+
+    // Update session ID
+    sessionIdRef.current = CartSession.getSessionId();
+    previousUserIdRef.current = newUserId;
+
+    // Clear existing subscription
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe();
+      subscriptionRef.current = null;
+    }
+
+    // Refresh cart with new session
+    refreshCart();
+    setupRealtimeSubscription();
+  }, [refreshCart, setupRealtimeSubscription]);
+
+  // Initialize session ID and handle user ID from props
   useEffect(() => {
+    // If userId is provided, set it in the session manager
+    if (userId !== undefined) {
+      CartSessionManager.setAuthenticatedUser(userId);
+      previousUserIdRef.current = userId;
+    }
+
     sessionIdRef.current = CartSession.getSessionId();
 
     refreshCart();
     setupRealtimeSubscription();
-    
+
     return () => {
       isMountedRef.current = false;
       if (subscriptionRef.current) {
@@ -84,6 +122,13 @@ export function useRealCart(): RealCartHook {
       }
     };
   }, [refreshCart, setupRealtimeSubscription]);
+
+  // Handle userId changes from props
+  useEffect(() => {
+    if (userId !== previousUserIdRef.current && userId !== undefined) {
+      setUserId(userId);
+    }
+  }, [userId, setUserId]);
 
   // Handle page visibility changes and focus to refresh cart when page becomes visible
   useEffect(() => {
@@ -294,6 +339,7 @@ export function useRealCart(): RealCartHook {
     clearCart,
     getCartTotal,
     getCartItemsCount,
-    refreshCart
+    refreshCart,
+    setUserId
   };
 }
