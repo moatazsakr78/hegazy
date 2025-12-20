@@ -396,7 +396,6 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
     try {
       setIsLoadingStatement(true)
       const statements: any[] = []
-      let runningBalance = 0
 
       // 1. Get record info including initial_balance
       const { data: recordData, error: recordError } = await (supabase as any)
@@ -405,10 +404,32 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
         .eq('id', safe.id)
         .single()
 
+      // 2. Get all cash drawer transactions - this is the PRIMARY source of truth for balance
+      // The balance_after field contains the accurate running balance after each transaction
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('cash_drawer_transactions')
+        .select('id, sale_id, amount, balance_after, transaction_type, notes, created_at')
+        .eq('record_id', safe.id)
+        .order('created_at', { ascending: true })
+
+      // 3. Get sales data for invoice details
+      const { data: salesData, error: salesError } = await supabase
+        .from('sales')
+        .select('id, invoice_number, total_amount, invoice_type, created_at, time, notes')
+        .eq('record_id', safe.id)
+
+      // Create a map of sale_id to sale data for quick lookup
+      const salesMap = new Map()
+      if (salesData) {
+        for (const sale of salesData) {
+          salesMap.set(sale.id, sale)
+        }
+      }
+
+      // Add initial balance if exists and there are no transactions before it
       if (!recordError && recordData) {
         const initialBalance = parseFloat(String(recordData.initial_balance || 0)) || 0
         if (initialBalance > 0) {
-          runningBalance = initialBalance
           const createdDate = recordData.created_at ? new Date(recordData.created_at) : new Date()
           statements.push({
             id: 'initial',
@@ -418,172 +439,75 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
             type: 'رصيد أولي',
             paidAmount: initialBalance,
             invoiceValue: 0,
-            balance: runningBalance,
-            created_at: recordData.created_at || new Date().toISOString()
+            balance: initialBalance, // Initial balance is the starting point
+            created_at: recordData.created_at || new Date().toISOString(),
+            isPositive: true
           })
         }
       }
 
-      // 2. Get all sales for this record (فواتير البيع و مرتجعات البيع)
-      const { data: salesData, error: salesError } = await supabase
-        .from('sales')
-        .select('id, invoice_number, total_amount, invoice_type, created_at, time, notes')
-        .eq('record_id', safe.id)
-        .order('created_at', { ascending: true })
-
-      // 2.5. Get all purchase invoices for this record (فواتير الشراء و مرتجعات الشراء)
-      const { data: purchaseData, error: purchaseError } = await supabase
-        .from('purchase_invoices')
-        .select('id, invoice_number, total_amount, invoice_type, created_at, time, notes')
-        .eq('record_id', safe.id)
-        .order('created_at', { ascending: true })
-
-      // 3. Get cash drawer transactions for actual paid amounts
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('cash_drawer_transactions')
-        .select('id, sale_id, amount, balance_after, transaction_type, notes, created_at')
-        .eq('record_id', safe.id)
-        .order('created_at', { ascending: true })
-
-      // Create a map of sale_id to transaction amount
-      const saleTransactionMap = new Map()
+      // Process all cash drawer transactions - using balance_after directly from database
       if (transactionsData) {
         for (const tx of transactionsData) {
-          if (tx.sale_id) {
-            saleTransactionMap.set(tx.sale_id, tx.amount)
-          }
-        }
-      }
+          const amount = parseFloat(String(tx.amount || 0)) || 0
+          const balanceAfter = parseFloat(String(tx.balance_after || 0)) || 0
 
-      // Process sales data
-      if (salesData) {
-        for (const sale of salesData) {
-          const invoiceValue = parseFloat(String(sale.total_amount || 0)) || 0
-          const paidAmount = saleTransactionMap.get(sale.id) || invoiceValue // fallback to total if no transaction
-          runningBalance += paidAmount
+          let typeName = 'دفعة'
+          let description = tx.notes || typeName
+          let invoiceValue = 0
+          const isPositive = amount >= 0
 
-          // Determine type based on invoice_type
-          let typeName = 'فاتورة بيع'
-          if (sale.invoice_type === 'Sale Return') {
-            typeName = 'مرتجع بيع'
-          }
+          // Check if this transaction is linked to a sale
+          if (tx.sale_id && salesMap.has(tx.sale_id)) {
+            const sale = salesMap.get(tx.sale_id)
+            invoiceValue = parseFloat(String(sale.total_amount || 0)) || 0
 
-          // Check if this is a payment only (دفعة) - payment without goods
-          const isPaymentOnly = sale.notes && sale.notes.includes('دفعة')
-          if (isPaymentOnly) {
-            typeName = 'دفعة'
-          }
+            // Determine type based on sale invoice_type
+            if (sale.invoice_type === 'Sale Return') {
+              typeName = 'مرتجع بيع'
+            } else {
+              typeName = 'فاتورة بيع'
+            }
 
-          const createdDate = sale.created_at ? new Date(sale.created_at) : new Date()
-          const timeStr = sale.time ? String(sale.time).substring(0, 5) : createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+            // Check if this is a payment only (دفعة) - payment without goods
+            if (sale.notes && sale.notes.includes('دفعة')) {
+              typeName = 'دفعة'
+            }
 
-          statements.push({
-            id: sale.id,
-            date: createdDate.toLocaleDateString('en-GB'),
-            time: timeStr,
-            description: `${typeName} - ${sale.invoice_number}`,
-            type: typeName,
-            paidAmount: Math.abs(paidAmount),
-            invoiceValue: Math.abs(invoiceValue),
-            balance: runningBalance,
-            created_at: sale.created_at || new Date().toISOString(),
-            isPositive: paidAmount >= 0
-          })
-        }
-      }
-
-      // Process purchase invoices data (فواتير الشراء تنقص من الرصيد)
-      if (purchaseData) {
-        for (const purchase of purchaseData) {
-          const invoiceValue = parseFloat(String(purchase.total_amount || 0)) || 0
-
-          // Determine type based on invoice_type
-          // Purchase Invoice = money goes out (negative)
-          // Purchase Return = money comes back (positive)
-          let typeName = 'فاتورة شراء'
-          let isPositiveAmount = false
-          if (purchase.invoice_type === 'Purchase Return') {
-            typeName = 'مرتجع شراء'
-            isPositiveAmount = true
-          }
-
-          const createdDate = purchase.created_at ? new Date(purchase.created_at) : new Date()
-          const timeStr = purchase.time ? String(purchase.time).substring(0, 5) : createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-
-          statements.push({
-            id: purchase.id,
-            date: createdDate.toLocaleDateString('en-GB'),
-            time: timeStr,
-            description: `${typeName} - ${purchase.invoice_number}`,
-            type: typeName,
-            paidAmount: Math.abs(invoiceValue),
-            invoiceValue: Math.abs(invoiceValue),
-            balance: runningBalance, // Will be recalculated later
-            created_at: purchase.created_at || new Date().toISOString(),
-            isPositive: isPositiveAmount
-          })
-        }
-      }
-
-      // Process non-sale transactions (deposits, withdrawals, adjustments)
-      if (transactionsData) {
-        for (const tx of transactionsData) {
-          if (!tx.sale_id) {
-            // This is a deposit, withdrawal, or adjustment
-            const amount = parseFloat(String(tx.amount || 0)) || 0
-            runningBalance += amount
-
-            let typeName = 'دفعة'
+            description = `${typeName} - ${sale.invoice_number}`
+          } else {
+            // Non-sale transaction (withdrawal, deposit, adjustment)
             if (tx.transaction_type === 'withdrawal') {
               typeName = 'سحب'
             } else if (tx.transaction_type === 'adjustment') {
               typeName = 'تسوية'
             } else if (tx.transaction_type === 'deposit') {
               typeName = 'دفعة'
+            } else if (tx.transaction_type === 'return') {
+              typeName = 'مرتجع بيع'
             }
-
-            const createdDate = tx.created_at ? new Date(tx.created_at) : new Date()
-
-            statements.push({
-              id: tx.id,
-              date: createdDate.toLocaleDateString('en-GB'),
-              time: createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-              description: tx.notes || typeName,
-              type: typeName,
-              paidAmount: Math.abs(amount),
-              invoiceValue: 0,
-              balance: runningBalance,
-              created_at: tx.created_at || new Date().toISOString(),
-              isPositive: amount >= 0
-            })
+            description = tx.notes || typeName
           }
+
+          const createdDate = tx.created_at ? new Date(tx.created_at) : new Date()
+
+          statements.push({
+            id: tx.id,
+            date: createdDate.toLocaleDateString('en-GB'),
+            time: createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+            description: description,
+            type: typeName,
+            paidAmount: Math.abs(amount),
+            invoiceValue: Math.abs(invoiceValue),
+            balance: balanceAfter, // Use balance_after directly from database - this is the accurate balance
+            created_at: tx.created_at || new Date().toISOString(),
+            isPositive: isPositive
+          })
         }
       }
 
-      // Sort by created_at descending (newest first)
-      statements.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-
-      // Recalculate running balance from oldest to newest, then reverse for display
-      let recalcBalance = 0
-      const sortedAsc = [...statements].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-      for (const stmt of sortedAsc) {
-        if (stmt.type === 'رصيد أولي') {
-          recalcBalance = stmt.paidAmount
-        } else if (stmt.type === 'مرتجع بيع' || stmt.type === 'سحب' || stmt.type === 'فاتورة شراء') {
-          // These decrease the balance (money going out)
-          recalcBalance -= stmt.paidAmount
-        } else if (stmt.type === 'مرتجع شراء') {
-          // Purchase returns increase the balance (money coming back)
-          recalcBalance += stmt.paidAmount
-        } else {
-          // Sales and deposits increase the balance
-          recalcBalance += stmt.paidAmount
-        }
-        stmt.balance = recalcBalance
-      }
-
-      // Sort descending for display
-      const sortedDesc = sortedAsc.reverse()
+      // Sort by created_at descending (newest first) for display
+      const sortedDesc = [...statements].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
       // Apply date filter to final statements
       const getDateRange = () => {
@@ -1955,15 +1879,15 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
       header: 'المبلغ المدفوع',
       accessor: 'paidAmount',
       width: 130,
-      render: (value: number, item: any) => (
-        <span className={`font-medium ${
-          item.type === 'مرتجع بيع' || item.type === 'سحب'
-            ? 'text-red-400'
-            : 'text-green-400'
-        }`}>
-          {item.type === 'مرتجع بيع' || item.type === 'سحب' ? '-' : '+'}{formatPrice(value, 'system')}
-        </span>
-      )
+      render: (value: number, item: any) => {
+        // Negative operations: sale return, withdrawal, purchase invoice
+        const isNegative = item.type === 'مرتجع بيع' || item.type === 'سحب' || item.type === 'فاتورة شراء' || !item.isPositive
+        return (
+          <span className={`font-medium ${isNegative ? 'text-red-400' : 'text-green-400'}`}>
+            {isNegative ? '-' : '+'}{formatPrice(value, 'system')}
+          </span>
+        )
+      }
     },
     {
       id: 'balance',

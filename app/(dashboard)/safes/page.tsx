@@ -66,8 +66,28 @@ export default function SafesPage() {
       return
     }
 
-    if (window.confirm(`هل أنت متأكد من حذف الخزنة "${safe.name}"؟`)) {
-      try {
+    try {
+      // Check if safe has balance before allowing deletion
+      const { data: drawer, error: drawerError } = await supabase
+        .from('cash_drawers')
+        .select('current_balance')
+        .eq('record_id', safe.id)
+        .single()
+
+      if (drawerError && drawerError.code !== 'PGRST116') {
+        console.error('Error checking safe balance:', drawerError)
+        alert('حدث خطأ أثناء التحقق من رصيد الخزنة')
+        return
+      }
+
+      // Prevent deletion if safe has balance
+      const balance = drawer?.current_balance || 0
+      if (balance !== 0) {
+        alert(`لا يمكن حذف الخزنة "${safe.name}" لأنها تحتوي على رصيد (${balance.toLocaleString()} ج.م)\n\nيجب تفريغ الخزنة أولاً قبل حذفها`)
+        return
+      }
+
+      if (window.confirm(`هل أنت متأكد من حذف الخزنة "${safe.name}"؟`)) {
         const { error } = await supabase
           .from('records')
           .delete()
@@ -80,10 +100,10 @@ export default function SafesPage() {
         }
 
         // The real-time subscription will automatically update the UI
-      } catch (error) {
-        console.error('Error deleting safe:', error)
-        alert('حدث خطأ أثناء حذف الخزنة')
       }
+    } catch (error) {
+      console.error('Error deleting safe:', error)
+      alert('حدث خطأ أثناء حذف الخزنة')
     }
   }
 
