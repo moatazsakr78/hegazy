@@ -77,12 +77,24 @@ export default function CustomersGridView({
   }, [customers])
 
   const getCustomerAvatarUrl = (customer: Customer) => {
-    // إذا كان لديه user_id، ابحث عن avatar_url في userAvatars
+    // 1. أولاً: استخدم profile_image_url من جدول العملاء مباشرة (صورة Google OAuth أو صورة مرفوعة)
+    if (customer.profile_image_url) {
+      return customer.profile_image_url;
+    }
+
+    // 2. ثانياً: إذا كان لديه user_id، ابحث عن avatar_url في userAvatars
     if (customer.user_id && userAvatars[customer.user_id]) {
       return userAvatars[customer.user_id];
     }
 
-    // إذا لم يكن لديه user_id أو avatar_url، ارجع null للاعتماد على الأحرف الأولى
+    // 3. ثالثاً: استخدم Gravatar إذا كان لديه بريد إلكتروني
+    if (customer.email) {
+      const emailHash = MD5(customer.email.toLowerCase().trim()).toString();
+      // d=404 يعني إرجاع خطأ 404 إذا لم تكن هناك صورة، مما يسمح بالـ fallback
+      return `https://www.gravatar.com/avatar/${emailHash}?d=404&s=200`;
+    }
+
+    // 4. أخيراً: ارجع null للاعتماد على الأحرف الأولى
     return null;
   }
 

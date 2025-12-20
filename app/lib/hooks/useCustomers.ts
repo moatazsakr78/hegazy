@@ -26,6 +26,8 @@ export interface Customer {
   tax_id: string | null
   notes: string | null
   user_id: string | null
+  profile_image_url: string | null
+  governorate: string | null
 }
 
 // Default customer ID that should never be deleted

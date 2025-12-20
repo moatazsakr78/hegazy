@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase/client'
 import { useCustomers, Customer } from '../lib/hooks/useCustomers'
 import { useCustomerGroups, CustomerGroup } from '../lib/hooks/useCustomerGroups'
+import MD5 from 'crypto-js/md5'
 import {
   XMarkIcon,
   MagnifyingGlassIcon,
@@ -151,13 +152,22 @@ export default function CustomersFilterModal({
       .toUpperCase()
       .slice(0, 2)
 
-    // Generate a nice avatar using UI Avatars API
-    const getAvatarUrl = (name: string, email?: string | null) => {
-      // Extract first two words for better avatar names
-      const nameWords = name.trim().split(' ').slice(0, 2);
+    // Get avatar URL with priority: profile_image_url > Gravatar > UI Avatars
+    const getAvatarUrl = (customer: Customer) => {
+      // 1. أولاً: استخدم profile_image_url من جدول العملاء (صورة Google OAuth أو مرفوعة)
+      if (customer.profile_image_url) {
+        return customer.profile_image_url;
+      }
+
+      // 2. ثانياً: استخدم Gravatar إذا كان لديه بريد إلكتروني
+      if (customer.email) {
+        const emailHash = MD5(customer.email.toLowerCase().trim()).toString();
+        return `https://www.gravatar.com/avatar/${emailHash}?d=404&s=200`;
+      }
+
+      // 3. أخيراً: استخدم UI Avatars كـ fallback
+      const nameWords = customer.name.trim().split(' ').slice(0, 2);
       const displayName = nameWords.join(' ');
-      
-      // Use UI Avatars API for consistent, beautiful avatars
       const params = new URLSearchParams({
         name: displayName,
         size: '96',
@@ -165,22 +175,36 @@ export default function CustomersFilterModal({
         color: 'ffffff',
         format: 'svg'
       });
-      
       return `https://ui-avatars.com/api/?${params.toString()}`;
     };
 
-    const avatarUrl = getAvatarUrl(customer.name, customer.email);
+    const avatarUrl = getAvatarUrl(customer);
 
     return (
       <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center bg-blue-600 border-2 border-blue-400">
-        <img 
+        <img
           src={avatarUrl}
-          alt={customer.name || 'Customer Avatar'} 
+          alt={customer.name || 'Customer Avatar'}
           className="w-full h-full object-cover rounded-full"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            target.parentElement!.innerHTML = `<span class="text-white text-lg font-bold">${initials}</span>`;
+            // إذا فشل Gravatar، جرب UI Avatars
+            if (target.src.includes('gravatar.com')) {
+              const nameWords = customer.name.trim().split(' ').slice(0, 2);
+              const displayName = nameWords.join(' ');
+              const params = new URLSearchParams({
+                name: displayName,
+                size: '96',
+                background: '3B82F6',
+                color: 'ffffff',
+                format: 'svg'
+              });
+              target.src = `https://ui-avatars.com/api/?${params.toString()}`;
+            } else {
+              // إذا فشل UI Avatars أيضاً، اعرض الأحرف الأولى
+              target.style.display = 'none';
+              target.parentElement!.innerHTML = `<span class="text-white text-lg font-bold">${initials}</span>`;
+            }
           }}
         />
       </div>
