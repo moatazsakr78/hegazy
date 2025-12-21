@@ -87,6 +87,7 @@ export async function GET(request: Request) {
     }
 
     const userId = session.user.id
+    const userEmail = session.user.email
 
     // Parse query parameters for filtering and pagination
     const { searchParams } = new URL(request.url)
@@ -97,12 +98,33 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '20')
     const offset = (page - 1) * limit
 
-    // First, get the customer record linked to this user
-    const { data: customer, error: customerError } = await supabaseAdmin
+    // First, try to get the customer record linked to this user by user_id
+    let { data: customer, error: customerError } = await supabaseAdmin
       .from('customers')
       .select('id, name, phone, email, address, city, governorate, account_balance, loyalty_points, rank, created_at')
       .eq('user_id', userId)
       .single()
+
+    // If not found by user_id, try to find by email and link them
+    if ((customerError || !customer) && userEmail) {
+      const { data: customerByEmail, error: emailError } = await supabaseAdmin
+        .from('customers')
+        .select('id, name, phone, email, address, city, governorate, account_balance, loyalty_points, rank, created_at')
+        .eq('email', userEmail)
+        .is('user_id', null)
+        .single()
+
+      if (customerByEmail && !emailError) {
+        // Link the customer to this user
+        await supabaseAdmin
+          .from('customers')
+          .update({ user_id: userId })
+          .eq('id', customerByEmail.id)
+
+        customer = customerByEmail
+        customerError = null
+      }
+    }
 
     if (customerError || !customer) {
       return NextResponse.json(
