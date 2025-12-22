@@ -16,7 +16,8 @@ import {
   ShieldCheckIcon,
   XMarkIcon,
   ClipboardDocumentListIcon,
-  CogIcon
+  CogIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline'
 import { hasPageAccess, type UserRole } from '@/app/lib/auth/roleBasedAccess'
 
@@ -28,6 +29,7 @@ const allSidebarItems = [
   { href: '/customers', label: 'العملاء', icon: UserGroupIcon },
   { href: '/suppliers', label: 'الموردين', icon: TruckIcon },
   { href: '/customer-orders', label: 'طلبات العملاء', icon: ClipboardDocumentListIcon },
+  { href: '/whatsapp', label: 'محادثات واتساب', icon: ChatBubbleLeftRightIcon },
   { href: '/safes', label: 'الخزن', icon: BanknotesIcon },
   { href: '/reports', label: 'التقارير', icon: ChartBarIcon },
   { href: '/permissions', label: 'الصلاحيات', icon: ShieldCheckIcon },
