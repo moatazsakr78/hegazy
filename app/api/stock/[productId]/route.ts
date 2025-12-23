@@ -5,9 +5,9 @@ import type { Database } from '@/app/lib/supabase/database.types';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-const supabase = createClient<Database, 'elfaroukgroup'>(supabaseUrl, supabaseAnonKey, {
+const supabase = createClient<Database, 'hegazy'>(supabaseUrl, supabaseAnonKey, {
   db: {
-    schema: 'elfaroukgroup' // Use elfaroukgroup schema for multi-tenant architecture
+    schema: 'hegazy' // Use hegazy schema for multi-tenant architecture
   }
 });
 

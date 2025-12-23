@@ -10,7 +10,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   {
     db: {
-      schema: 'elfaroukgroup' // Use elfaroukgroup schema for multi-tenant architecture
+      schema: 'hegazy' // Use hegazy schema for multi-tenant architecture
     },
     auth: {
       persistSession: false,

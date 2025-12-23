@@ -9,14 +9,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Singleton instance for main client
-let supabaseInstance: SupabaseClient<Database, 'elfaroukgroup'> | null = null
+let supabaseInstance: SupabaseClient<Database, 'hegazy'> | null = null
 
 // Get singleton client instance
-export const getSupabase = (): SupabaseClient<Database, 'elfaroukgroup'> => {
+export const getSupabase = (): SupabaseClient<Database, 'hegazy'> => {
   if (!supabaseInstance) {
-    supabaseInstance = createClient<Database, 'elfaroukgroup'>(supabaseUrl, supabaseAnonKey, {
+    supabaseInstance = createClient<Database, 'hegazy'>(supabaseUrl, supabaseAnonKey, {
       db: {
-        schema: 'elfaroukgroup' // Use elfaroukgroup schema for multi-tenant architecture
+        schema: 'hegazy' // Use hegazy schema for multi-tenant architecture
       },
       auth: {
         autoRefreshToken: true,

@@ -213,7 +213,7 @@ export const DEFAULT_SETTINGS: SystemSettingsObject = {
     lockout_duration_minutes: 30
   },
   company: {
-    name: 'elfaroukgroup',
+    name: 'hegazy',
     logoUrl: '',
     logoShape: 'square',
     socialMedia: [{ platform: '', link: '' }],

@@ -19,7 +19,7 @@ import { supabase } from '../lib/supabase/client'
 import * as XLSX from 'xlsx'
 
 // Helper function to access product_import_history table
-// This table was created in elfaroukgroup schema but may not be in TypeScript types yet
+// This table was created in hegazy schema but may not be in TypeScript types yet
 const getImportHistoryTable = () => (supabase as any).from('product_import_history')
 
 // Supported file formats

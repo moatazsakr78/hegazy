@@ -331,7 +331,8 @@
       "WebFetch(domain:vercel.com)",
       "Bash(npx tsc --noEmit)",
       "Bash(echo:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(Get-Content \"C:\\\\Users\\\\pc\\\\.claude\\\\projects\\\\C--Users-pc-Desktop-elfaroukgroup2\\\\dd297a78-2f18-49f0-a256-74ca2abcb2ea\\\\tool-results\\\\mcp-supabase-list_tables-1766453157973.txt\" -First 100)"
     ],
     "deny": [],
     "additionalDirectories": [

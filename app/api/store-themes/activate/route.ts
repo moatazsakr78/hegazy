@@ -11,7 +11,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   {
     db: {
-      schema: 'elfaroukgroup'
+      schema: 'hegazy'
     },
     auth: {
       persistSession: false,
