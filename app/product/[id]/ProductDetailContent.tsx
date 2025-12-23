@@ -1632,7 +1632,7 @@ export default function ProductDetailContent({ productId, serverData }: ProductD
               <h6 className="font-semibold mb-3">تواصل معنا</h6>
               <div className="space-y-2 text-gray-400">
                 <p>📞 966+123456789</p>
-                <p>✉️ info@elfarouk-store.com</p>
+                <p>✉️ info@hegazy-store.com</p>
                 <p>📍 الرياض، المملكة العربية السعودية</p>
               </div>
             </div>
