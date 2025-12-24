@@ -579,7 +579,7 @@ export default function TabletHome({
                 {/* Logo and Title - Left Side */}
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <div className={`h-12 w-12 ${logoRoundingClass} overflow-hidden bg-transparent flex items-center justify-center`}>
-                    <img src={logoUrl || '/assets/logo/El Farouk Group2.png'} alt={companyName} className="h-full w-full object-cover" />
+                    <img src={logoUrl || '/assets/logo/Hegazy.png'} alt={companyName} className="h-full w-full object-cover" />
                   </div>
                   <h1 className="text-lg font-bold text-white">{companyName}</h1>
                 </div>
@@ -667,7 +667,7 @@ export default function TabletHome({
               {/* Logo and Title - Left Side */}
               <div className="flex items-center gap-3 flex-shrink-0">
                 <div className={`h-16 w-16 ${logoRoundingClass} overflow-hidden bg-transparent flex items-center justify-center`}>
-                  <img src={logoUrl || '/assets/logo/El Farouk Group2.png'} alt={companyName} className="h-full w-full object-cover" />
+                  <img src={logoUrl || '/assets/logo/Hegazy.png'} alt={companyName} className="h-full w-full object-cover" />
                 </div>
                 <div className="flex flex-col">
                   <h1 className="text-lg font-bold text-white leading-tight">{companyName}</h1>
@@ -834,7 +834,7 @@ export default function TabletHome({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <img src={logoUrl || '/assets/logo/El Farouk Group2.png'} alt={companyName} className="h-7 w-7 object-contain" />
+                <img src={logoUrl || '/assets/logo/Hegazy.png'} alt={companyName} className="h-7 w-7 object-contain" />
                 <h5 className="font-bold text-lg text-white">{companyName}</h5>
               </div>
               <p className="text-gray-400 mb-4">متجرك المتكامل للحصول على أفضل المنتجات بأسعار مميزة وجودة عالية</p>

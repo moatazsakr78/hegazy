@@ -117,8 +117,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async signIn({ user, account, profile }) {
       // Handle Google OAuth sign-in
       if (account?.provider === "google") {
+        console.log('🔐 Google OAuth sign-in attempt for:', user.email)
+        console.log('📊 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+        console.log('🔑 Service Role Key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
+
         try {
           // Check if user exists using Supabase
+          console.log('🔍 Checking if user exists in auth_users table...')
           const { data: existingUsers, error: queryError } = await supabase
             .from('auth_users')
             .select('id')
@@ -127,11 +132,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           if (queryError) {
             console.error('❌ Error checking existing user:', queryError)
+            console.error('❌ Query error details:', JSON.stringify(queryError, null, 2))
             return false
           }
+          console.log('✅ Query successful, existing users:', existingUsers?.length || 0)
 
           // If user doesn't exist, create one
           if (!existingUsers || existingUsers.length === 0) {
+            console.log('👤 User not found, creating new user...')
             // Create auth_users entry
             const { data: newUser, error: insertError } = await supabase
               .from('auth_users')
@@ -146,8 +154,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
             if (insertError) {
               console.error('❌ Error creating auth user:', insertError)
+              console.error('❌ Insert error details:', JSON.stringify(insertError, null, 2))
               return false
             }
+            console.log('✅ New user created with ID:', newUser?.id)
 
             // Create user_profiles entry with default role
             if (newUser) {

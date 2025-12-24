@@ -986,7 +986,7 @@ export default function ProductDetailsModal({
             <div className="flex items-center gap-3">
               <div className="h-14 w-14 rounded-lg flex items-center justify-center">
                 <img
-                  src={logoUrl || '/assets/logo/El Farouk Group2.png'}
+                  src={logoUrl || '/assets/logo/Hegazy.png'}
                   alt={`${companyName} Logo`}
                   className="h-full w-full object-contain rounded-lg"
                 />
@@ -1013,7 +1013,7 @@ export default function ProductDetailsModal({
             <div className="flex items-center gap-2">
               <div className="h-10 w-10 rounded-lg flex items-center justify-center">
                 <img
-                  src={logoUrl || '/assets/logo/El Farouk Group2.png'}
+                  src={logoUrl || '/assets/logo/Hegazy.png'}
                   alt={`${companyName} Logo`}
                   className="h-full w-full object-contain rounded-lg"
                 />

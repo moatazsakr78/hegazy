@@ -975,7 +975,7 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
     const isSale = transaction.transactionType === 'sale'
     const isPurchase = transaction.transactionType === 'purchase'
     const showTotalDebt = isSale && customerData && customerData.id !== '00000000-0000-0000-0000-000000000001' && calculatedBalance !== 0
-    const logoUrl = window.location.origin + '/assets/logo/El Farouk Group2.png'
+    const logoUrl = window.location.origin + '/assets/logo/Hegazy.png'
 
     const receiptContent = `
       <html dir="rtl" lang="ar">

@@ -347,7 +347,7 @@ export default function ProfilePage() {
 
             {/* اللوجو - اليمين */}
             <div className="flex items-center">
-              <img src={logoUrl || '/assets/logo/El Farouk Group2.png'} alt="الفاروق" className="h-12 w-12 md:h-16 md:w-16 object-contain" />
+              <img src={logoUrl || '/assets/logo/Hegazy.png'} alt="الفاروق" className="h-12 w-12 md:h-16 md:w-16 object-contain" />
             </div>
 
           </div>

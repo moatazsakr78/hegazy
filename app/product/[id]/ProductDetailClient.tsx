@@ -172,7 +172,7 @@ export default function ProductDetailClient({
         <header className="fixed top-0 left-0 right-0 border-b border-gray-700 py-2 z-40 transition-all duration-300" style={{backgroundColor: 'var(--primary-color)'}}>
           <div className="max-w-[90%] mx-auto px-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/assets/logo/El Farouk Group2.png" alt="الفاروق" className="h-10 w-10 object-contain" />
+              <img src="/assets/logo/Hegazy.png" alt="الفاروق" className="h-10 w-10 object-contain" />
               <h1 className="text-base font-bold text-white">El Farouk Group</h1>
             </div>
 
@@ -207,7 +207,7 @@ export default function ProductDetailClient({
         <div className="max-w-[80%] mx-auto px-4 flex items-center justify-between min-h-[80px]">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-3">
-              <img src="/assets/logo/El Farouk Group2.png" alt="الفاروق" className="h-20 w-20 object-contain" />
+              <img src="/assets/logo/Hegazy.png" alt="الفاروق" className="h-20 w-20 object-contain" />
               <h1 className="text-xl font-bold text-white">El Farouk Group</h1>
             </div>
           </div>

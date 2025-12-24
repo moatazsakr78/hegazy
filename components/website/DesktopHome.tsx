@@ -561,7 +561,7 @@ export default function DesktopHome({
             <div className="max-w-[90%] mx-auto px-4 flex items-center justify-between w-full min-h-[50px]">
               <div className="flex items-center gap-3">
                 <div className={`h-10 w-10 ${logoRoundingClass} overflow-hidden bg-transparent flex items-center justify-center`}>
-                  <img src={logoUrl || '/assets/logo/El Farouk Group2.png'} alt={companyName} className="h-full w-full object-cover" />
+                  <img src={logoUrl || '/assets/logo/Hegazy.png'} alt={companyName} className="h-full w-full object-cover" />
                 </div>
                 <h1 className="text-base font-bold text-white">{companyName}</h1>
               </div>
@@ -652,7 +652,7 @@ export default function DesktopHome({
             <div className="flex items-center gap-8">
               <div className="flex items-center gap-3">
                 <div className={`h-20 w-20 ${logoRoundingClass} overflow-hidden bg-transparent flex items-center justify-center`}>
-                  <img src={logoUrl || '/assets/logo/El Farouk Group2.png'} alt={companyName} className="h-full w-full object-cover" />
+                  <img src={logoUrl || '/assets/logo/Hegazy.png'} alt={companyName} className="h-full w-full object-cover" />
                 </div>
                 <h1 className="text-xl font-bold text-white">{companyName}</h1>
               </div>
@@ -796,7 +796,7 @@ export default function DesktopHome({
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <img src={logoUrl || '/assets/logo/El Farouk Group2.png'} alt={companyName} className="h-8 w-8 object-contain" />
+                <img src={logoUrl || '/assets/logo/Hegazy.png'} alt={companyName} className="h-8 w-8 object-contain" />
                 <h5 className="font-bold text-lg text-white">{companyName}</h5>
               </div>
               <p className="text-gray-400">متجرك المتكامل للحصول على أفضل المنتجات بأسعار مميزة وجودة عالية</p>

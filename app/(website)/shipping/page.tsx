@@ -113,7 +113,7 @@ export default function ShippingPage() {
             <div className="flex items-center gap-3">
               <div className="h-20 w-20 rounded-lg flex items-center justify-center">
                 <img 
-                  src={logoUrl || '/assets/logo/El Farouk Group2.png'} 
+                  src={logoUrl || '/assets/logo/Hegazy.png'} 
                   alt="El Farouk Group Logo" 
                   className="h-full w-full object-contain rounded-lg"
                 />

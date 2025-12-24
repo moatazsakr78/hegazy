@@ -1010,7 +1010,7 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
     // Check if customer is valid (not walk-in) for showing payment details
     const showPaymentDetails = customer && customer.id !== '00000000-0000-0000-0000-000000000001'
     // Note: customerBalance is from the component state (calculated in fetchCustomerBalance)
-    const logoUrl = window.location.origin + '/assets/logo/El Farouk Group2.png'
+    const logoUrl = window.location.origin + '/assets/logo/Hegazy.png'
 
     const receiptContent = `
       <html dir="rtl" lang="ar">
@@ -1355,7 +1355,7 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
     const total = Math.abs(sale.total_amount)
 
     // Logo URL for the company logo
-    const logoUrl = window.location.origin + '/assets/logo/El Farouk Group2.png'
+    const logoUrl = window.location.origin + '/assets/logo/Hegazy.png'
 
     const a4InvoiceContent = `
       <!DOCTYPE html>
@@ -1701,7 +1701,7 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
         .limit(1)
         .single()
 
-      const logoUrl = window.location.origin + '/assets/logo/El Farouk Group2.png'
+      const logoUrl = window.location.origin + '/assets/logo/Hegazy.png'
       const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
       const totalDiscount = items.reduce((sum, item) => sum + (item.discount || 0), 0)
       const total = Math.abs(sale.total_amount)

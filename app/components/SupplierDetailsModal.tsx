@@ -819,7 +819,7 @@ export default function SupplierDetailsModal({ isOpen, onClose, supplier }: Supp
       .limit(1)
       .single()
 
-    const logoUrl = window.location.origin + '/assets/logo/El Farouk Group2.png'
+    const logoUrl = window.location.origin + '/assets/logo/Hegazy.png'
 
     const receiptContent = `
       <html dir="rtl" lang="ar">
@@ -931,7 +931,7 @@ export default function SupplierDetailsModal({ isOpen, onClose, supplier }: Supp
       .limit(1)
       .single()
 
-    const logoUrl = window.location.origin + '/assets/logo/El Farouk Group2.png'
+    const logoUrl = window.location.origin + '/assets/logo/Hegazy.png'
     const currentDate = new Date().toLocaleDateString('ar-EG', {
       year: 'numeric',
       month: 'long',

@@ -556,7 +556,7 @@ export default function MobileHome({
               
               {/* Logo */}
               <div className={`h-14 w-14 ${logoRoundingClass} overflow-hidden bg-transparent flex items-center justify-center`}>
-                <img src={logoUrl || '/assets/logo/El Farouk Group2.png'} alt={companyName} className="h-full w-full object-cover" />
+                <img src={logoUrl || '/assets/logo/Hegazy.png'} alt={companyName} className="h-full w-full object-cover" />
               </div>
 
               {/* Logo Text */}
@@ -964,7 +964,7 @@ export default function MobileHome({
             {/* Company Info */}
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <img src={logoUrl || '/assets/logo/El Farouk Group2.png'} alt={companyName} className="h-6 w-6 object-contain" />
+                <img src={logoUrl || '/assets/logo/Hegazy.png'} alt={companyName} className="h-6 w-6 object-contain" />
                 <h5 className="font-bold text-base text-white">{companyName}</h5>
               </div>
               <p className="text-gray-400 text-sm">متجرك المتكامل للحصول على أفضل المنتجات بأسعار مميزة وجودة عالية</p>
