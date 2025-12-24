@@ -851,8 +851,8 @@ export default function SupplierDetailsModal({ isOpen, onClose, supplier }: Supp
         </head>
         <body>
           <div class="receipt-header">
-            <img src="${logoUrl}" alt="El Farouk Group" class="company-logo" onerror="this.style.display='none'" />
-            <div class="company-name">El Farouk Group</div>
+            <img src="${logoUrl}" alt="Hegazy" class="company-logo" onerror="this.style.display='none'" />
+            <div class="company-name">Hegazy</div>
             <div class="receipt-date">${new Date(invoice.created_at).toLocaleDateString('ar-EG')} - ${new Date(invoice.created_at).toLocaleDateString('en-US')}</div>
             <div class="receipt-phone">${branchData?.phone || '01102862856'}</div>
           </div>
@@ -1000,7 +1000,7 @@ export default function SupplierDetailsModal({ isOpen, onClose, supplier }: Supp
           <div class="invoice-container">
             <div class="invoice-header">
               <div class="company-info">
-                <div class="company-name">El Farouk Group</div>
+                <div class="company-name">Hegazy</div>
                 <div class="company-details">${branchData?.name || 'الفرع الرئيسي'}<br>${branchData?.phone || '01102862856'}</div>
               </div>
               <img src="${logoUrl}" alt="Logo" class="company-logo" onerror="this.style.display='none'" />
@@ -1157,7 +1157,7 @@ export default function SupplierDetailsModal({ isOpen, onClose, supplier }: Supp
             <div class="invoice-container">
               <div class="invoice-header">
                 <div>
-                  <div class="company-name">El Farouk Group</div>
+                  <div class="company-name">Hegazy</div>
                   <div class="company-details">${branchData?.name || 'الفرع الرئيسي'}<br>${branchData?.phone || '01102862856'}</div>
                 </div>
               </div>

@@ -1250,12 +1250,12 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
           <div class="receipt-header">
             <img
               src="${logoUrl}"
-              alt="El Farouk Group"
+              alt="Hegazy"
               class="company-logo"
               onerror="this.style.display='none'; document.querySelector('.company-logo-fallback').style.display='block';"
             />
             <div class="company-logo-fallback" style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 4px;">🏢</div>
-            <div class="company-name">El Farouk Group</div>
+            <div class="company-name">Hegazy</div>
             <div class="receipt-date">${new Date(sale.created_at).toLocaleDateString("ar-EG")} - ${new Date(sale.created_at).toLocaleDateString("en-US")}</div>
             <div class="receipt-address">${branchData?.name || "الفرع الرئيسي"}</div>
             <div class="receipt-phone">${branchData?.phone || "01102862856"}</div>
@@ -1571,8 +1571,8 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
           <div class="invoice-container">
             <div class="invoice-header">
               <div class="header-right">
-                <img src="${logoUrl}" alt="El Farouk Group" class="company-logo" onerror="this.style.display='none'" />
-                <div class="company-name">El Farouk Group</div>
+                <img src="${logoUrl}" alt="Hegazy" class="company-logo" onerror="this.style.display='none'" />
+                <div class="company-name">Hegazy</div>
               </div>
             </div>
 
@@ -1752,7 +1752,7 @@ export default function CustomerDetailsModal({ isOpen, onClose, customer }: Cust
             <div class="invoice-container">
               <div class="invoice-header">
                 <div>
-                  <div class="company-name">El Farouk Group</div>
+                  <div class="company-name">Hegazy</div>
                   <div class="company-details">${branchData?.name || 'الفرع الرئيسي'}<br>${branchData?.phone || '01102862856'}</div>
                 </div>
               </div>

@@ -1192,12 +1192,12 @@ export default function SafeDetailsModal({ isOpen, onClose, safe }: SafeDetailsM
           <div class="receipt-header">
             <img
               src="${logoUrl}"
-              alt="El Farouk Group"
+              alt="Hegazy"
               class="company-logo"
               onerror="this.style.display='none'; document.querySelector('.company-logo-fallback').style.display='block';"
             />
             <div class="company-logo-fallback" style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 4px;">🏢</div>
-            <div class="company-name">El Farouk Group</div>
+            <div class="company-name">Hegazy</div>
             <div class="receipt-date">${new Date(transaction.created_at).toLocaleDateString("ar-EG")} - ${new Date(transaction.created_at).toLocaleDateString("en-US")}</div>
             <div class="receipt-address">${branchData?.name || "الفرع الرئيسي"}</div>
             <div class="receipt-phone">${branchData?.phone || "01102862856"}</div>

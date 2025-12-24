@@ -801,7 +801,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
           <div className="max-w-[90%] mx-auto px-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img src="/assets/logo/Hegazy.png" alt="الفاروق" className="h-10 w-10 object-contain" />
-              <h1 className="text-base font-bold text-white">El Farouk Group</h1>
+              <h1 className="text-base font-bold text-white">Hegazy</h1>
             </div>
             
             <div className="flex items-center gap-4">
@@ -836,7 +836,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-3">
               <img src="/assets/logo/Hegazy.png" alt="الفاروق" className="h-20 w-20 object-contain" />
-              <h1 className="text-xl font-bold text-white">El Farouk Group</h1>
+              <h1 className="text-xl font-bold text-white">Hegazy</h1>
             </div>
           </div>
           
@@ -1540,7 +1540,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <img src="/assets/logo/Hegazy.png" alt="الفاروق" className="h-8 w-8 object-contain" />
-                <h5 className="font-bold text-lg text-white">El Farouk Group</h5>
+                <h5 className="font-bold text-lg text-white">Hegazy</h5>
               </div>
               <p className="text-gray-400">متجرك المتكامل للحصول على أفضل المنتجات بأسعار مميزة وجودة عالية</p>
             </div>

@@ -10,8 +10,8 @@ import { ThemeProvider } from '@/lib/contexts/ThemeContext'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  title: 'El Farouk Group Store',
-  description: 'El Farouk Group Store - أفضل المنتجات بأسعار مميزة',
+  title: 'Hegazy Store',
+  description: 'Hegazy Store - أفضل المنتجات بأسعار مميزة',
   applicationName: 'hegazy',
   appleWebApp: {
     capable: true,

@@ -107,7 +107,7 @@ export default function SignUpPage() {
               <div className="h-20 w-20 rounded-lg flex items-center justify-center">
                 <img 
                   src={logoUrl || '/assets/logo/Hegazy.png'} 
-                  alt="El Farouk Group Logo" 
+                  alt="Hegazy Logo" 
                   className="h-full w-full object-contain rounded-lg"
                 />
               </div>
