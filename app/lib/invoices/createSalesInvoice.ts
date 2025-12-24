@@ -100,9 +100,9 @@ export async function createSalesInvoice({
     // Generate invoice number
     const invoiceNumber = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
-    // Get current time
+    // Get current time as full ISO timestamp
     const now = new Date()
-    const timeString = now.toTimeString().split(' ')[0] // HH:MM:SS format
+    const timeString = now.toISOString() // Full ISO format with timezone
 
     console.log('Creating sales invoice with data:', {
       invoice_number: invoiceNumber,
